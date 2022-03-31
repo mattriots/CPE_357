@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #include <iostream>
 
 void fct(int k[100]) {
