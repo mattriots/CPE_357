@@ -16,7 +16,8 @@ class cvec3d {
  private:
  public:
   float x, y, z;
-  void printit() {
+  void printit() 
+  {
     printf("x=%f\n", x);
     printf("y=%f\n", y);
     printf("z=%f\n", z);
