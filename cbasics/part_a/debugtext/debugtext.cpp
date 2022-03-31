@@ -11,9 +11,9 @@ int main() {
 
     text[0] = 'e';
     text[1] = 0;
-  // sprintf(text,"hello");
+  sprintf(text,"hello");
 
-  strcat(text, " world");
+  // strcat(text, " world");
   // strcpy(text, "dfssdfsdf");
 
   // strcpy(text,"world");

@@ -35,5 +35,15 @@ int main() {
   cout<< *ip << endl;
   cout<< *fp << endl;
 
+
+  // char text[] = "hello folks";
+
+  // strcat(text, "hi");
+
+  int a;
+  int *q = &a;
+  p = 1;
+  *p = 13;
+
   return 0;
 }
