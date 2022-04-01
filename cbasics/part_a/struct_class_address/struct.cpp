@@ -40,6 +40,14 @@ int main() {
 
   // strcat(text, "hi");
 
+
+  char text[] = "hello";
+  char *p =text +1;
+
+  if(p[5] == *(p+5)){
+    printf("yep");
+  }
+
   int a;
   int *q = &a;
   p = 1;
