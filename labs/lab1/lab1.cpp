@@ -1,4 +1,5 @@
 #include <stdio.h>
+
 #include <iostream>
 #include <string>
 
@@ -6,79 +7,108 @@ using namespace std;
 void input();
 
 typedef struct listelement {
-    char text[1000];
+  char text[1000];
 
-  listelement *next, *prev;
+  listelement *prev, *next;
 
 } listelement;
 
 listelement* head = NULL;
 
-void push(){
+void push() {
+  cout << "insert text:" << endl;
+  char usertext[1000];
+  cin >> usertext;
 
-    cout << "insert text:" << endl;
-    char usertext[1000];
-    cin >> usertext;
-    int data = 5;
+  if (head == NULL) {
+    head = (listelement*)malloc(sizeof(listelement));
+    head->next = NULL;
+    head->prev = NULL;
+    int i = 0;
 
-	if (head == NULL){
-		head = (listelement*)malloc(sizeof(listelement));	
-        int i = 0;
-        //save the userinput to the listelement
-        while(usertext[i] != 0){
-            head->text[i] = usertext[i];    //this 'works' for now
-            i++;                              //but there must be a better way                     
-        }
-		head -> next = NULL;
-		head -> prev = NULL;
-	}
-	else{
-		listelement *newelem = new listelement;
-		listelement *last = NULL;
-		for(last = head; last -> next != NULL; last = last->next){
-                    cout << last->next << endl;
-		}
-		last -> next = newelem;
-		newelem -> prev = last;
-		newelem -> next = NULL;
-                //save the userinput to the listelement
-        int i = 0;
-        while(usertext[i] != 0){
-            newelem->text[i] = usertext[i];   //this 'works' for now
-            i++;                              //but there must be a better way                     
-        }
-	}
+    // save the userinput to the listelement TEXT
+    while (usertext[i] != 0) {
+      head->text[i] = usertext[i];  // this 'works' for now
+      i++;                          // but there must be a better way
+    }
+
+  } else {
+    listelement* newelem = new listelement;
+    listelement* last = NULL;
+    for (last = head; last->next != NULL; last = last->next) {
+    }
+
+    last->next = newelem;
+    newelem->prev = last;
+    newelem->next = NULL;
+
+    // save the userinput to the listelement TEXT
+    int i = 0;
+    while (usertext[i] != 0) {
+      newelem->text[i] = usertext[i];  // this 'works' for now
+      i++;                             // but there must be a better way
+    }
+  }
 
   cout << "you entered " << usertext << endl;
   cout << "pushed the text" << endl;
   input();
-
-
 }
 
 void print() {
-
-    for(listelement *p = head; p != NULL; p = p->next ){
-        cout << p->text << endl;
-    }
+  int i = 1;
+  cout << "------------------" << endl;
+  for (listelement* p = head; p != NULL; p = p->next) {
+    cout << i << " : " << p->text << endl;
+    i++;
+  }
+  cout << "------------------" << endl;
   input();
 }
-
-//Need to figure out delete and we're good
-// Do similar thing to the for loop
-// loop until a  certain element is found. 
-// Then "remove it" from the chain
-// take the previous element's next element and make it 
-// the element after's address
-// a   b   c     <--- delete b
-// a.next = &c
-// c.prev = &a
 
 void del() {
-  cout << "delete item" << endl;
+  int i = 1;
+  cout << "------------------" << endl;
+  for (listelement* p = head; p != NULL; p = p->next) {
+    cout << i << " : " << p->text << endl;
+    i++;
+  }
+  cout << "------------------" << endl;
+  cout << "enter an item to delete:" << endl;
+
+  int usernum;
+  cin >> usernum;
+
+  int j = 1;
+  for (listelement* p = head; p != NULL; p = p->next) {
+    string s = p->text;
+    if (j == usernum) {
+      //
+      if (p == head) {
+        head = p->next;
+        input();
+      } else if (p->next == NULL) {
+        listelement* previous = p->prev;
+
+        previous->next = NULL;
+        int* t = new int;
+        delete t;
+        input();
+      } else {
+        listelement* previous = p->prev;
+        listelement* nextel = p->next;
+        previous->next = nextel;
+        nextel->prev = previous;
+        input();
+      }
+    }
+    
+    j++;
+  }
+
+  cout << "item does not exist" << endl;
   input();
 }
-
 int end() {
   cout << "ending program" << endl;
   return 0;
@@ -93,8 +123,6 @@ void input() {
   int in;
   scanf("%i", &in);
 
-  printf("You entered %i\n", in);
-
   if (in == 1) {
     push();
 
@@ -108,7 +136,8 @@ void input() {
     end();
   } else {
     cout << "not a valid input" << endl;
-    input();
+    return;
+   
   }
 }
 
