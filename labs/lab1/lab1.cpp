@@ -127,10 +127,10 @@ void del()
   cout << "item does not exist" << endl;
   input();
 }
-int end()
+void end()
 {
   cout << "ending program" << endl;
-  return 0;
+  return;
 }
 
 void input()
@@ -164,6 +164,8 @@ void input()
     cout << "not a valid input" << endl;
     return;
   }
+
+  return;
 }
 
 int main()
