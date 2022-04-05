@@ -20,17 +20,17 @@ int main()
     // file.open("test.bin"); //another way to do it
     
     if(!file.is_open()){  //check to see if file exists or is open?
-        return 0;
+        return 0;       //if its not, exit program
     }
     mystruct s;
 
-    //read into file
+    //read in FROM file
     file >> s.b;
     file >> s.i;
 
     file.close();
 
-    //write to file
+    //write TO file
     ofstream ofile("out.bin");
     ofile << s.b;
     ofile << s.i;
@@ -55,18 +55,19 @@ int main()
     cout << s.i << endl;
 
     // Write bytefile out
-    /* FILE *file = fopen("test.bin", "wb"); //open a file
+     FILE *file = fopen("test.bin", "wb"); //open a file, write binary
                     // fopen("file", "what to do with file")
                     // w = write, r = read, wb = write binary, rb = read binary
 
      BYTE y = 5;
      int i = 99;
-        //fwrite(address to write to, how much, how many times, from file pointer)
+     cout << &i << endl;
+        //fwrite(address of what to write, how much, how many times, to file pointer)
      fwrite(&y, 1, 1, file);
      fwrite(&i, 4, 1, file);
 
 
-     fclose(file);    */
+     fclose(file);   
     // close file
 
     return 0;
