@@ -1,2 +1,1 @@
-
-void cont
+    BYTE *p = &pix;
