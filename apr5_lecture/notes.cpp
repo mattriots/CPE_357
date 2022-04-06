@@ -24,22 +24,25 @@ int main()
     // int i[100];
 
     // int *p = new int[100];
-    int *pc = (int*)malloc(sizeof(int) * 100);
+    // int *pc = (int*)malloc(sizeof(int) * 100);
+
+    cout << "before sbrk " <<sbrk(0) << endl;
 
     int *p = (int*) sbrk(100 * sizeof(int));
 
-    // cout << p[40] << endl;
-    cout << p << endl;
-    cout << pc << endl;
-    cout << sbrk(0) << endl;
+ 
+    // cout << pc << endl;
+    cout << "after sbrk  " <<sbrk(0) << endl;
+    cout << "p           " << p << endl;
+    cout <<"p[40]      " << p[40] << endl;
 
 
     //using brk
-    int *p2 = (int*)sbrk(0);
-    brk(p2 + 100*sizeof(int)); // same as sbrk from above
-    p2[50] = 1234;
-    cout << p2[50] << endl;
-    cout << p2 << endl;
+    // int *p2 = (int*)sbrk(0);
+    // brk(p2 + 100*sizeof(int)); // same as sbrk from above
+    // p2[50] = 1234;
+    // cout << p2[50] << endl;
+    // cout << p2 << endl;
 
     //Using sbrk to allocate space for the memory of the image
     //

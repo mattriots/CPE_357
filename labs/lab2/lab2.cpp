@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
+#include <cmath>
 
 using namespace std;
 
@@ -10,6 +11,9 @@ typedef unsigned char BYTE;
 typedef unsigned short WORD;
 typedef unsigned int DWORD;
 typedef unsigned int LONG;
+
+// void contrast(BYTE &pix, int size);
+// void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix);
 
 struct tagBIGMAPFILEHEADER
 {
@@ -36,18 +40,11 @@ struct tagBITMAPINFOHEADER
     DWORD biClrImportant; // number of colors that are important
 };
 
+void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix);
+void contrast(BYTE &pix, int size);
+
 int main()
 {
-    // ifstream file("jar.bmp");
-
-    // tagBIGMAPFILEHEADER fh;
-    // file >> fh.bfType;
-    // file >> fh.bfSize;
-    // file >> fh.bfReserved1;
-    // file >> fh.bfReserved2;
-    // file >> fh.bfOffBits;
-
-    // file.close();
 
     // create the file and read in all the header information
     FILE *file = fopen("jar.bmp", "rb");
@@ -75,25 +72,43 @@ int main()
 
     int isize = fih.biSizeImage; // size of image
 
-    sbrk(isize); // allot the size needed for the data
-                 // in the bmp
+    cout << "before : " << sbrk(0) << endl;
 
-    BYTE pix[isize]; // Create a byte array for pixels
+    // BYTE * p= (BYTE*)sbrk(isize);
+    BYTE pix[isize];
+    cout << "after  : " << sbrk(0) << endl;
+    cout << "pix " << &pix << endl;
 
-    fread(&pix, isize, 1, file); // read pixel bytes into arr
+    fread(&pix, isize, 1, file);
 
     fclose(file); // close the file like a good programmer
 
-    for (int i = 0; i < isize; i++)
+    contrast(*pix, isize); // Send the pixels off to be contrasted
+
+    outFile(fh, fih, *pix); // Export the file
+
+    return 0;
+}
+
+void contrast(BYTE &pix, int size)
+{
+    BYTE *p = &pix;
+    float exponent = 2.0;
+
+    cout << &p << endl;
+
+    for (int i = 0; i < size; i++)
     {
-        if (i % 3 == 0)
-        {
-            pix[i - 2] = 255;
-        }
-        else{
-            pix[i] = 0;
-        }
+        float temp = (float)p[i];
+        temp = temp / 255;
+        temp = pow(temp, exponent);
+        temp = temp * 255;
+        p[i] = (BYTE)temp;
     }
+}
+
+void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix)
+{
 
     FILE *outFile = fopen("out.bmp", "wb");
 
@@ -115,7 +130,6 @@ int main()
     fwrite(&fih.biClrUsed, sizeof(fih.biClrUsed), 1, outFile);
     fwrite(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, outFile);
 
+    int isize = fih.biSizeImage;
     fwrite(&pix, isize, 1, outFile);
-
-    return 0;
 }
