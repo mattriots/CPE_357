@@ -74,12 +74,12 @@ int main()
 
     cout << "before : " << sbrk(0) << endl;
 
-    // BYTE * p= (BYTE*)sbrk(isize);
-    BYTE pix[isize];
+    BYTE *pix = (BYTE*)sbrk(isize);
+    pix[isize];
     cout << "after  : " << sbrk(0) << endl;
     cout << "pix " << &pix << endl;
 
-    fread(&pix, isize, 1, file);
+    fread(pix, isize, 1, file);
 
     fclose(file); // close the file like a good programmer
 
@@ -93,7 +93,7 @@ int main()
 void contrast(BYTE &pix, int size)
 {
     BYTE *p = &pix;
-    float exponent = 2.0;
+    float exponent = 3.0;
 
     cout << &p << endl;
 
