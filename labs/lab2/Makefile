@@ -16,8 +16,8 @@ tests:
 	./lab2 wolf.bmp wolf_2.bmp 5.0
 
 clean:
-	rm jar_*
-	rm flowers_*
-	rm lion_*
-	rm tunnel_*
-	rm wolf_*
+	rm -f jar_*
+	rm -f flowers_*
+	rm -f lion_*
+	rm -f tunnel_*
+	rm -f wolf_*
