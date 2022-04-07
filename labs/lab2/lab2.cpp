@@ -89,6 +89,8 @@ int main(int argc, char **argv)
 
     outFile(fh, fih, *pix, *fileOut); // Export the file
 
+    sbrk(-isize);
+
     return 0;
 }
 
