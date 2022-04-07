@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
     int isize = fih.biSizeImage; // size of image
 
-    BYTE *pix = (BYTE *)sbrk(isize); //frees up needs space for array. Size = isize
+    BYTE *pix = (BYTE *)sbrk(isize); //frees up needed space for array. Size = isize
                                     //Sets "start" point to *pix
 
     fread(pix, isize, 1, file);     //Read the data from the picture into the alloted space
