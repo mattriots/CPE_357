@@ -133,4 +133,5 @@ void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix, char 
 
     int isize = fih.biSizeImage;
     fwrite(&pix, isize, 1, outFile);
+    fclose(outFile);
 }
