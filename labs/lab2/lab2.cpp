@@ -38,8 +38,8 @@ struct tagBITMAPINFOHEADER
     DWORD biClrImportant; // number of colors that are important
 };
 
-void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix, char &fileOut);
-void contrast(BYTE &pix, int size, float contrastEx);
+void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE *pix, char *fileOut);
+void contrast(BYTE *pix, int size, float contrastEx);
 
 int main(int argc, char **argv)
 {
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     fread(&fih.biClrUsed, sizeof(fih.biClrUsed), 1, file);
     fread(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, file);
 
-    int isize = fih.biSizeImage; // size of image
+    int isize = fih.biSizeImage; // size of image data
 
     BYTE *pix = (BYTE *)sbrk(isize); //frees up needed space for array. Size = isize
                                     //Sets "start" point to *pix
@@ -85,33 +85,32 @@ int main(int argc, char **argv)
     fclose(file); // close the file like a good programmer
 
 
-    contrast(*pix, isize, contrastEx); // Send the pixels off to be contrasted
+    contrast(pix, isize, contrastEx); // Send the pixels off to be contrasted
 
-    outFile(fh, fih, *pix, *fileOut); // Export the file
+    outFile(fh, fih, pix, fileOut); // Export the file
 
     sbrk(-isize);
 
     return 0;
 }
 
-void contrast(BYTE &pix, int size, float contrastEx)
+void contrast(BYTE *pix, int size, float contrastEx)
 {
-    BYTE *p = &pix;
 
     for (int i = 0; i < size; i++)
     {
-        float temp = (float)p[i];
+        float temp = (float)pix[i];
         temp = temp / 255;
         temp = pow(temp, contrastEx);
         temp = temp * 255;
-        p[i] = (BYTE)temp;
+        pix[i] = (BYTE)temp;
     }
 }
 
-void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix, char &fileOut)
+void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE *pix, char *fileOut)
 {
-    char *f = &fileOut;
-    FILE *outFile = fopen(f, "wb");
+    // char *f = &fileOut;
+    FILE *outFile = fopen(fileOut, "wb");
 
     fwrite(&fh.bfType, sizeof(fh.bfType), 1, outFile);
     fwrite(&fh.bfSize, sizeof(fh.bfSize), 1, outFile);
@@ -132,6 +131,6 @@ void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE &pix, char 
     fwrite(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, outFile);
 
     int isize = fih.biSizeImage;
-    fwrite(&pix, isize, 1, outFile);
+    fwrite(pix, isize, 1, outFile);
     fclose(outFile);
 }
