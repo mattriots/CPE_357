@@ -130,30 +130,51 @@ int main(int argc, char **argv)
     //Something to do with the rows vs columns?
     // Am I coloring the wrong pixels?
 
-    int wid = fih.biWidth;
-    int len = fih.biHeight;
+    int wid = fih.biWidth * 3;
+    int len = fih.biHeight * 3;
 
-    for (int i = 0; i < wid; i++)
+    for (int j = 0; j < 100; j++)
     {
 
-        float temp = (float)pix[i];
-        temp = temp / 255;
-        if (i % 3 == 0)
+        for (int i = 0; i < wid; i++)
         {
-            temp = temp * b_grade; // blue
-        }
-        else if (i % 3 == 1)
-        {
-            temp = temp * g_grade; // green
-        }
-        else if (i % 3 == 2)
-        {
-            temp = temp * r_grade; // red
-        }
 
-        temp = temp * 255;
-        pix[i] = (BYTE)temp;
-        // pix[i] = 0;
+            float temp = (float)pix[(wid * j) + i];
+            temp = temp / 255;
+            if (((wid * j) + i) % 3 == 0)
+            {
+                temp = temp * b_grade; // blue
+            }
+            else if (((wid * j) + i)  % 3 == 1)
+            {
+                temp = temp * g_grade; // green
+            }
+            else if (((wid * j) + i)  % 3 == 2)
+            {
+                temp = temp * r_grade; // red
+            }
+
+            // temp = temp * g_grade;
+
+            temp = temp * 255;
+            pix[((wid * j) + i) ] = (BYTE)temp;
+            // pix[i] = 0;
+        }
+        if (((wid * j) % 4 != 0)
+        {
+            if (wid % 4 == 1)
+            {
+                wid += 3;
+            }
+            else if (wid % 4 == 2)
+            {
+                wid += 2;
+            }
+            else if (wid % 4 == 3)
+            {
+                wid += 1;
+            }
+        }
     }
 
     stop = clock(); // end normal
