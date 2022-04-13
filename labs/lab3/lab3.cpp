@@ -6,6 +6,10 @@
 #include <fstream>
 #include <cmath>
 
+#include <time.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+
 using namespace std;
 
 typedef unsigned char BYTE;
@@ -38,20 +42,25 @@ struct tagBITMAPINFOHEADER
     DWORD biClrImportant; // number of colors that are important
 };
 
-void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE *pix, char *fileOut);
-void contrast(BYTE *pix, int size, float contrastEx);
-
 int main(int argc, char **argv)
 {
-    char * fileIn = argv[1];        //stores pointer to fileIn name
-    char * fileOut = argv[2];       //stores pointer to fileOut name
-    float contrastEx = stof(argv[3]); //converts string to float
 
-    cout << (char*)fileIn << endl;
-    cout << (char*)fileOut << endl;
-    cout << contrastEx << endl;
+    char *fileIn = argv[1];
+    float b_grade = stof(argv[2]);
+    float g_grade = stof(argv[3]);
+    float r_grade = stof(argv[4]);
+    char *fileOut = argv[5];
 
-    // create the file and read in all the header information
+    // char *fileIn = "jar.bmp";
+    // char *fileOut = "jar_2.bmp";
+
+    // float b_grade = 0.5;
+    // float g_grade = 0.5;
+    // float r_grade = 1.0;
+
+    void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE * pix, char *fileOut);
+    void colorGrading(BYTE * pix, int size, float b_grade, float g_grade, float r_grade);
+
     FILE *file = fopen(fileIn, "rb");
     tagBIGMAPFILEHEADER fh;
 
@@ -75,33 +84,110 @@ int main(int argc, char **argv)
     fread(&fih.biClrUsed, sizeof(fih.biClrUsed), 1, file);
     fread(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, file);
 
-    int isize = fih.biSizeImage; // size of image data
+    int isize = fih.biSizeImage;
+    int isizehalf = isize / 2;
+    clock_t start, stop, startf, stopf; // clocks
 
-    BYTE *pix = (BYTE *)sbrk(isize); //frees up needed space for array. Size = isize
-                                    //Sets "start" point to *pix
+    BYTE *pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE, // Making space for pic data
+                             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    fread(pix, isize, 1, file);     //Read the data from the picture into the alloted space
+    fread(pix, isize, 1, file); // Read in file and close
 
-    fclose(file); // close the file like a good programmer
+    fclose(file);
 
+    if (isizehalf % 3 != 0) // To compensate for halving landing in the middle of the bgr values
+    {
+        if (isizehalf % 3 == 1)
+        {
+            isizehalf -= 1;
+        }
+        else
+        {
+            isizehalf -= 2;
+        }
+    }
 
-    contrast(pix, isize, contrastEx); // Send the pixels off to be contrasted
+    startf = clock(); // start fork
 
-    outFile(fh, fih, pix, fileOut); // Export the file
+    // if (fork() == 0) // child
+    // {
+    //     colorGrading(pix, isizehalf, b_grade, g_grade, r_grade);
+    //     return 0;
+    // }
+    // else // parent
+    // {
+    //     wait(0);
+    //     colorGrading(pix + isizehalf, isizehalf, b_grade, g_grade, r_grade);
+    // }
 
-    sbrk(-isize);
+    stopf = clock(); // end fork
+
+    start = clock(); // start normal
+
+    // colorGrading(pix, isize, b_grade, g_grade, r_grade);
+
+    //Need to figure out why the flowers picture is coming out all whack
+    //Something to do with the rows vs columns?
+    // Am I coloring the wrong pixels?
+
+    for (int i = 0; i < 786 * 3 * 100; i++)
+    {
+
+        float temp = (float)pix[i];
+        temp = temp / 255;
+        if (i % 3 == 0)
+        {
+            temp = temp * b_grade; // blue
+        }
+        else if (i % 3 == 1)
+        {
+            temp = temp * g_grade; // green
+        }
+        else if (i % 3 == 2)
+        {
+            temp = temp * r_grade; // red
+        }
+
+        temp = temp * 255;
+        pix[i] = (BYTE)temp;
+        // pix[i] = 0;
+    }
+
+    stop = clock(); // end normal
+    outFile(fh, fih, pix, fileOut);
+    munmap(pix, isize);
+
+    // cout << "startf: " << startf << endl;
+    // cout << "stopf: " << stopf << endl;
+    // cout << "start: " << start << endl;
+    // cout << "stop: " << stop << endl;
+    cout << "Fork: " << stopf - startf << endl;
+    cout << "Non-Fork: " << stop - start << endl;
+    cout << "Difference: " << (stop - start) - (stopf - startf) << endl;
 
     return 0;
 }
 
-void contrast(BYTE *pix, int size, float contrastEx)
+void colorGrading(BYTE *pix, int size, float b_grade, float g_grade, float r_grade)
 {
 
     for (int i = 0; i < size; i++)
     {
         float temp = (float)pix[i];
         temp = temp / 255;
-        temp = pow(temp, contrastEx);
+        if (i % 3 == 0)
+        {
+            temp = temp * b_grade; // blue
+        }
+        else if (i % 3 == 1)
+        {
+            temp = temp * g_grade; // green
+        }
+        else if (i % 3 == 2)
+        {
+            temp = temp * r_grade; // red
+        }
+
         temp = temp * 255;
         pix[i] = (BYTE)temp;
     }
@@ -109,7 +195,6 @@ void contrast(BYTE *pix, int size, float contrastEx)
 
 void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE *pix, char *fileOut)
 {
-    // char *f = &fileOut;
     FILE *outFile = fopen(fileOut, "wb");
 
     fwrite(&fh.bfType, sizeof(fh.bfType), 1, outFile);

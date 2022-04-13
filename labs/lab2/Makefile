@@ -1,6 +1,6 @@
 
 tests:
-	./lab2 jar.bmp jar_1.bmp .1
+	./lab2 jar.bmp jar_1.bmp .10
 	./lab2 jar.bmp jar_2.bmp 3.0
 
 	./lab2 flowers.bmp flowers_1.bmp .20
