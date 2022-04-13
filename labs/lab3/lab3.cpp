@@ -130,7 +130,10 @@ int main(int argc, char **argv)
     //Something to do with the rows vs columns?
     // Am I coloring the wrong pixels?
 
-    for (int i = 0; i < 786 * 3 * 100; i++)
+    int wid = fih.biWidth;
+    int len = fih.biHeight;
+
+    for (int i = 0; i < wid; i++)
     {
 
         float temp = (float)pix[i];
