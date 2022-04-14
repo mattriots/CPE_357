@@ -42,61 +42,49 @@ struct tagBITMAPINFOHEADER
     DWORD biClrImportant; // number of colors that are important
 };
 
+void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
+void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
+void colorGrading(BYTE *pix, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade);
+
 int main(int argc, char **argv)
 {
-
-    char *fileIn = argv[1];
+    ////////////////////////////////////
+    // VARIABLES, SETUP, CLI INPUT    //
+    ///////////////////////////////////
+    char *fileInName = argv[1];
     float b_grade = stof(argv[2]);
     float g_grade = stof(argv[3]);
     float r_grade = stof(argv[4]);
     char *fileOut = argv[5];
 
-    // char *fileIn = "jar.bmp";
-    // char *fileOut = "jar_2.bmp";
+    tagBIGMAPFILEHEADER fh;  // Structs for fileheaders
+    tagBITMAPINFOHEADER fih; 
 
-    // float b_grade = 0.5;
-    // float g_grade = 0.5;
-    // float r_grade = 1.0;
-
-    void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE * pix, char *fileOut);
-    void colorGrading(BYTE * pix, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade);
-  
-  
-    FILE *file = fopen(fileIn, "rb");
-    tagBIGMAPFILEHEADER fh;
-
-    fread(&fh.bfType, sizeof(fh.bfType), 1, file);
-    fread(&fh.bfSize, sizeof(fh.bfSize), 1, file);
-    fread(&fh.bfReserved1, sizeof(fh.bfReserved1), 1, file);
-    fread(&fh.bfReserved2, sizeof(fh.bfReserved2), 1, file);
-    fread(&fh.bfOffBits, sizeof(fh.bfOffBits), 1, file);
-
-    tagBITMAPINFOHEADER fih;
-
-    fread(&fih.biSize, sizeof(fih.biSize), 1, file);
-    fread(&fih.biWidth, sizeof(fih.biWidth), 1, file);
-    fread(&fih.biHeight, sizeof(fih.biHeight), 1, file);
-    fread(&fih.biPlanes, sizeof(fih.biPlanes), 1, file);
-    fread(&fih.biBitCount, sizeof(fih.biBitCount), 1, file);
-    fread(&fih.biCompression, sizeof(fih.biCompression), 1, file);
-    fread(&fih.biSizeImage, sizeof(fih.biSizeImage), 1, file);
-    fread(&fih.biXPelsPerMeter, sizeof(fih.biXPelsPerMeter), 1, file);
-    fread(&fih.biYPelsPerMeter, sizeof(fih.biYPelsPerMeter), 1, file);
-    fread(&fih.biClrUsed, sizeof(fih.biClrUsed), 1, file);
-    fread(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, file);
-
-    int isize = fih.biSizeImage;
-    int isizehalf = isize / 2;
-    int width = fih.biWidth * 3;
-    int height = fih.biHeight;
     clock_t start, stop, startf, stopf; // clocks
+
+    FILE *fileIn = fopen(fileInName, "rb"); // Open file
+
+    inFile(fh, fih, fileIn); //Read in all the header data from file
+
+    ///// local variables
+    int isize = fih.biSizeImage; //size of image
+    int width = fih.biWidth * 3; // Width in bytes
+    int height = fih.biHeight;   // Height in pixels
+
+     ////////////////////////////
+    // MAKING SPACE 1         //
+    ///////////////////////////
 
     BYTE *pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE, // Making space for pic data
                              MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    fread(pix, isize, 1, file); // Read in file and close
+    fread(pix, isize, 1, fileIn); // Read in pix data
 
-    fclose(file); // Close
+    fclose(fileIn); // Close
+
+    ////////////////////
+    // FORK TIME      //
+    ////////////////////
 
     startf = clock(); // start fork
 
@@ -113,28 +101,43 @@ int main(int argc, char **argv)
 
     stopf = clock(); // end fork
 
-    munmap(pix, isize);
+    munmap(pix, isize); // Clear space
 
-    file = fopen(fileIn, "rb");
 
-    BYTE *pix2 = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE, // Making space for pic data
+    //////////////////////////////////////
+    // MAKING SPACE 2 & RE-READ IN FILE //
+    //////////////////////////////////////
+
+    fileIn = fopen(fileInName, "rb"); // Open file
+
+    pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE,     // Making space for pic data
                              MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-   
+    inFile(fh, fih, fileIn);
 
+    fread(pix, isize, 1, fileIn); // Read in pix data
+
+    fclose(fileIn); // Close
+
+
+    ////////////////////////////////////
+    // NORMAL FUNCTION TIME    //
+    ///////////////////////////////////
 
     start = clock(); // start normal
-
-
-    // fread(pix, isize, 1, file2); // Read in file 2nd time and close
-
-    fclose(file);
 
     colorGrading(pix, width, 0, height, b_grade, g_grade, r_grade);
 
     stop = clock(); // end normal
-    outFile(fh, fih, pix, fileOut);
-    munmap(pix, isize);
+
+
+    ////////////////////////////////////
+    // PRINTOUT AND CLOSE   //
+    ///////////////////////////////////
+
+    outFile(fh, fih, pix, fileOut);  //Write file out
+
+    munmap(pix, isize);  //Clean up space
 
     cout << "Fork: " << stopf - startf << endl;
     cout << "Non-Fork: " << stop - start << endl;
@@ -146,52 +149,77 @@ int main(int argc, char **argv)
 void colorGrading(BYTE *pix, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade)
 {
 
-    //Ceiling function to catch padding problems
-     if ((width  % 4 != 0))
+    // Ceiling function to catch padding problems
+    if ((width % 4 != 0))
+    {
+        if (width % 4 == 1)
         {
-            if (width % 4 == 1)
-            {
-                width += 3;
-            }
-            else if (width % 4 == 2)
-            {
-                width += 2;
-            }
-            else if (width % 4 == 3)
-            {
-                width += 1;
-            }
+            width += 3;
+        }
+        else if (width % 4 == 2)
+        {
+            width += 2;
+        }
+        else if (width % 4 == 3)
+        {
+            width += 1;
+        }
     }
 
-    for (int j = hiStart; j < hiEnd; j++)
+    for (int j = hiStart; j < hiEnd; j++) // height or # of rows
     {
 
-        for (int i = 0; i < width; i++)
+        for (int i = 0; i < width; i++) // width or bytes per row
         {
 
-            float temp = (float)pix[(width * j) + i];
-            temp = temp / 255;
+            // float temp = (float)pix[(width * j) + i];
+            // BYTE tempB = pix[(width * j) + i];
+            // temp = temp / 255;
             if (i % 3 == 0)
             {
-                temp = temp * b_grade; // blue
+                // temp = temp * b_grade; // blue
+                pix[(width * j) + i] *= b_grade; //blue
             }
             else if (i % 3 == 1)
             {
-                temp = temp * g_grade; // green
+                // temp = temp * g_grade; // green
+                pix[(width * j) + i] *= g_grade;  //green
             }
             else if (i % 3 == 2)
             {
-                temp = temp * r_grade; // red
+                // temp = temp * r_grade; // red
+                pix[(width * j) + i] *= r_grade;  //red
             }
 
-            temp = temp * 255;
-            pix[((width * j) + i)] = (BYTE)temp;
-          
+            // temp = temp * 255;
+            // pix[((width * j) + i)] = (BYTE)temp;
         }
     }
 }
+// passing by reference with &  <----- REMEMBER THIS
+void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *inFile)
+{
 
-void outFile(tagBIGMAPFILEHEADER fh, tagBITMAPINFOHEADER fih, BYTE *pix, char *fileOut)
+    fread(&fh.bfType, sizeof(fh.bfType), 1, inFile);
+    fread(&fh.bfSize, sizeof(fh.bfSize), 1, inFile);
+    fread(&fh.bfReserved1, sizeof(fh.bfReserved1), 1, inFile);
+    fread(&fh.bfReserved2, sizeof(fh.bfReserved2), 1, inFile);
+    fread(&fh.bfOffBits, sizeof(fh.bfOffBits), 1, inFile);
+
+    fread(&fih.biSize, sizeof(fih.biSize), 1, inFile);
+    fread(&fih.biWidth, sizeof(fih.biWidth), 1, inFile);
+    fread(&fih.biHeight, sizeof(fih.biHeight), 1, inFile);
+    fread(&fih.biPlanes, sizeof(fih.biPlanes), 1, inFile);
+    fread(&fih.biBitCount, sizeof(fih.biBitCount), 1, inFile);
+    fread(&fih.biCompression, sizeof(fih.biCompression), 1, inFile);
+    fread(&fih.biSizeImage, sizeof(fih.biSizeImage), 1, inFile);
+    fread(&fih.biXPelsPerMeter, sizeof(fih.biXPelsPerMeter), 1, inFile);
+    fread(&fih.biYPelsPerMeter, sizeof(fih.biYPelsPerMeter), 1, inFile);
+    fread(&fih.biClrUsed, sizeof(fih.biClrUsed), 1, inFile);
+    fread(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, inFile);
+}
+
+void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut)
 {
     FILE *outFile = fopen(fileOut, "wb");
 
