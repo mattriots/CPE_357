@@ -3,10 +3,8 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
-#include <fstream>
-#include <cmath>
 
-#include <time.h>
+#include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
 
@@ -44,7 +42,7 @@ struct tagBITMAPINFOHEADER
 
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
-void colorGrading(BYTE *pix, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade);
+void colorGrading(BYTE *pix, BYTE *dataStore, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade);
 
 int main(int argc, char **argv)
 {
@@ -57,113 +55,101 @@ int main(int argc, char **argv)
     float r_grade = stof(argv[4]);
     char *fileOut = argv[5];
 
-    tagBIGMAPFILEHEADER fh;  // Structs for fileheaders
-    tagBITMAPINFOHEADER fih; 
+    tagBIGMAPFILEHEADER fh; // Struct var for fileheaders
+    tagBITMAPINFOHEADER fih;
 
-    clock_t start, stop, startf, stopf; // clocks
+    struct timeval start, end, startf, endf; //Struct vars for timing
 
     FILE *fileIn = fopen(fileInName, "rb"); // Open file
 
-    inFile(fh, fih, fileIn); //Read in all the header data from file
+    inFile(fh, fih, fileIn); // Read in all the header data from file
 
     ///// local variables
-    int isize = fih.biSizeImage; //size of image
+    int isize = fih.biSizeImage; // size of image
     int width = fih.biWidth * 3; // Width in bytes
     int height = fih.biHeight;   // Height in pixels
 
-     ////////////////////////////
-    // MAKING SPACE 1         //
+    ////////////////////////////
+    // MAKING SPACE          //
     ///////////////////////////
+
+    BYTE *dataStore = (BYTE *)malloc(isize); // making space for data storage
+                                            //  This is where the altered data will live
 
     BYTE *pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE, // Making space for pic data
                              MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     fread(pix, isize, 1, fileIn); // Read in pix data
 
-    fclose(fileIn); // Close
+    fclose(fileIn); // Close file (especially before fork)
 
     ////////////////////
     // FORK TIME      //
     ////////////////////
 
-    startf = clock(); // start fork
 
-    if (fork() == 0) // child
+    gettimeofday(&startf, NULL);  // start timing fork -- using time of day
+
+    int pid = fork();
+
+    if (pid == 0) // child
     {
-        colorGrading(pix, width, 0, height / 2, b_grade, g_grade, r_grade);
+        colorGrading(pix, dataStore, width, 0, height / 2, b_grade, g_grade, r_grade);
+
         return 0;
     }
-    else // parent
+    else
     {
-        wait(0);
-        colorGrading(pix, width, height / 2, height, b_grade, g_grade, r_grade);
+        // parent
+        colorGrading(pix, dataStore, width, height / 2, height, b_grade, g_grade, r_grade);
+
+        wait(NULL); // Wait AFTER the parent does its work
     }
 
-    stopf = clock(); // end fork
+    gettimeofday(&endf, NULL);  //end timing fork -- using time of day
 
-    munmap(pix, isize); // Clear space
-
-
-    //////////////////////////////////////
-    // MAKING SPACE 2 & RE-READ IN FILE //
-    //////////////////////////////////////
-
-    fileIn = fopen(fileInName, "rb"); // Open file
-
-    pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE,     // Making space for pic data
-                             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-    inFile(fh, fih, fileIn);
-
-    fread(pix, isize, 1, fileIn); // Read in pix data
-
-    fclose(fileIn); // Close
+    long durationF = 1000000 * (endf.tv_sec - startf.tv_sec) + (endf.tv_usec - startf.tv_usec); //Duration of for in microseconds
 
 
     ////////////////////////////////////
     // NORMAL FUNCTION TIME    //
     ///////////////////////////////////
 
-    start = clock(); // start normal
 
-    colorGrading(pix, width, 0, height, b_grade, g_grade, r_grade);
+    gettimeofday(&start, NULL);  // start timing normal -- using time of day
 
-    stop = clock(); // end normal
+
+    colorGrading(pix, dataStore, width, 0, height, b_grade, g_grade, r_grade);
+
+
+    gettimeofday(&end, NULL);  // end timing normal -- using time of day
+
+    long duration = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
 
 
     ////////////////////////////////////
     // PRINTOUT AND CLOSE   //
     ///////////////////////////////////
 
-    outFile(fh, fih, pix, fileOut);  //Write file out
+    outFile(fh, fih, dataStore, fileOut); // Write file out
 
-    munmap(pix, isize);  //Clean up space
-
-    cout << "Fork: " << stopf - startf << endl;
-    cout << "Non-Fork: " << stop - start << endl;
-    cout << "Difference: " << (stop - start) - (stopf - startf) << endl;
+    munmap(pix, isize); // Clear mmap
+    free(dataStore);    // Free up malloc
+    
+    cout << "Fork: " << durationF << endl;
+    cout << "Non-Fork: " << duration << endl;
+    cout << "Difference: " << duration - durationF << endl;
 
     return 0;
 }
 
-void colorGrading(BYTE *pix, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade)
+void colorGrading(BYTE *pix, BYTE *dataStore, int width, int hiStart, int hiEnd, float b_grade, float g_grade, float r_grade)
 {
 
     // Ceiling function to catch padding problems
     if ((width % 4 != 0))
     {
-        if (width % 4 == 1)
-        {
-            width += 3;
-        }
-        else if (width % 4 == 2)
-        {
-            width += 2;
-        }
-        else if (width % 4 == 3)
-        {
-            width += 1;
-        }
+        width += 4 - width % 4;
     }
 
     for (int j = hiStart; j < hiEnd; j++) // height or # of rows
@@ -171,35 +157,21 @@ void colorGrading(BYTE *pix, int width, int hiStart, int hiEnd, float b_grade, f
 
         for (int i = 0; i < width; i++) // width or bytes per row
         {
+            BYTE b, g, r; // local BYTE variables to hold pix data
 
-            // float temp = (float)pix[(width * j) + i];
-            // BYTE tempB = pix[(width * j) + i];
-            // temp = temp / 255;
-            if (i % 3 == 0)
-            {
-                // temp = temp * b_grade; // blue
-                pix[(width * j) + i] *= b_grade; //blue
-            }
-            else if (i % 3 == 1)
-            {
-                // temp = temp * g_grade; // green
-                pix[(width * j) + i] *= g_grade;  //green
-            }
-            else if (i % 3 == 2)
-            {
-                // temp = temp * r_grade; // red
-                pix[(width * j) + i] *= r_grade;  //red
-            }
+            b = pix[(width * j) + i * 3 + 0];
+            g = pix[(width * j) + i * 3 + 1];
+            r = pix[(width * j) + i * 3 + 2];
 
-            // temp = temp * 255;
-            // pix[((width * j) + i)] = (BYTE)temp;
+            dataStore[(width * j) + i * 3 + 0] = b * b_grade; /// Store pix * grade --> data store
+            dataStore[(width * j) + i * 3 + 1] = g * g_grade;
+            dataStore[(width * j) + i * 3 + 2] = r * r_grade;
         }
     }
 }
 // passing by reference with &  <----- REMEMBER THIS
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *inFile)
 {
-
     fread(&fh.bfType, sizeof(fh.bfType), 1, inFile);
     fread(&fh.bfSize, sizeof(fh.bfSize), 1, inFile);
     fread(&fh.bfReserved1, sizeof(fh.bfReserved1), 1, inFile);
@@ -219,7 +191,7 @@ void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *inFile)
     fread(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, inFile);
 }
 
-void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut)
+void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *dataStore, char *fileOut)
 {
     FILE *outFile = fopen(fileOut, "wb");
 
@@ -242,6 +214,6 @@ void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char 
     fwrite(&fih.biClrImportant, sizeof(fih.biClrImportant), 1, outFile);
 
     int isize = fih.biSizeImage;
-    fwrite(pix, isize, 1, outFile);
+    fwrite(dataStore, isize, 1, outFile);
     fclose(outFile);
 }
