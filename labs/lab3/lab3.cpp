@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     // MAKING SPACE          //
     ///////////////////////////
 
-    BYTE *dataStore = (BYTE *)malloc(isize); // making space for data storage
+    BYTE *dataStore = (BYTE *)malloc(width*height*3); // making space for data storage
                                             //  This is where the altered data will live
 
     BYTE *pix = (BYTE *)mmap(NULL, isize, PROT_READ | PROT_WRITE, // Making space for pic data
