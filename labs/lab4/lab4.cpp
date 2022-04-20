@@ -83,7 +83,7 @@ int main()
     ///////////////////////////////
 
     //make space for the incoming text
-    char *text = (char *)malloc(1000);
+    char text[1000];
 
     for (;;) // infinite loop
     {
@@ -95,10 +95,7 @@ int main()
 
         cout << *flag << endl;
 
-        if (*flag == 1)
-        {
-            changetext(text, ra); //Change the text to add "!" to front and back
-        }
+        changetext(text, ra); //Change the text to add "!" to front and back
 
         if (text[1] == 'q') // just working for 'q' so far
         {
@@ -110,7 +107,6 @@ int main()
     wait(0);
 
     munmap(flag, sizeof(int)); //clean up space
-    free(text);
 
     return 0;
 }
