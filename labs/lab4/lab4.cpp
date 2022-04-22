@@ -49,6 +49,7 @@ int main()
     {
         for (;;)
         {
+            close(pi[0]);
             *flag = 0; //Set flag to 0. So if after 10 seconds its still in active
                        //The if (flag == 0) is run
 
@@ -66,6 +67,7 @@ int main()
                 kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
 
                 write(pi[1], "no activity detected\n", strlen("no activity detected\n")); //Write this to the terminal
+                close(pi[1]);
             }
 
             //If flag is 2 then 'q' was entered and its time to break outta here
@@ -84,6 +86,7 @@ int main()
 
     //make space for the incoming text
     char text[1000];
+    close(pi[1]);
 
     for (;;) // infinite loop
     {
@@ -93,8 +96,6 @@ int main()
 
         *flag = 1; //Set the flag to 1 cuz we are writing now!
 
-        cout << *flag << endl;
-
         changetext(text, ra); //Change the text to add "!" to front and back
 
         if (text[1] == 'q') // just working for 'q' so far
@@ -103,6 +104,8 @@ int main()
             break;
         }
     }
+
+    close(pi[0]);
 
     wait(0);
 
