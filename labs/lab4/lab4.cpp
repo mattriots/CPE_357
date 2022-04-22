@@ -67,7 +67,7 @@ int main()
                 kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
 
                 write(pi[1], "no activity detected\n", strlen("no activity detected\n")); //Write this to the terminal
-                close(pi[1]);
+               
             }
 
             //If flag is 2 then 'q' was entered and its time to break outta here
@@ -77,6 +77,7 @@ int main()
             }
         }
 
+        close(pi[1]);
         return 0;
     }
 
@@ -105,9 +106,13 @@ int main()
         }
     }
 
-    close(pi[0]);
+   
 
     wait(0);
+
+    *flag = 0;
+
+     close(pi[0]);
 
     munmap(flag, sizeof(int)); //clean up space
 
