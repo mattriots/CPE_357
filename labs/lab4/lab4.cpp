@@ -13,7 +13,6 @@ using namespace std;
 // GLOBAL VARS AND HEADERS  ///
 ///////////////////////////////
 
-
 int pi[2];
 
 void signalfct(int i);
@@ -32,10 +31,10 @@ int main()
     // you can make 2 pipes to do 2 way communication
     pipe(pi);
 
-    //Parent process id
+    // Parent process id
     int parent_pid = getpid();
 
-    //Save stdin behavior for later
+    // Save stdin behavior for later
     int save_stdin = dup(STDIN_FILENO);
 
     // Have to mmap some memory for the parent/child to share
@@ -51,26 +50,26 @@ int main()
         for (;;)
         {
             close(pi[0]);
-            *flag = 0; //Set flag to 0. So if after 10 seconds its still inactive
-                       //The if (flag == 0) is run
+            *flag = 0; // Set flag to 0. So if after 10 seconds its still inactive
+                       // The if (flag == 0) is run
 
-            for (int i = 1; i < 11; i++) //For loop to sleep for 10 seconds. 1 sec at a time
-            {                            //This way we can jump out of sleep quickly
+            for (int i = 1; i < 11; i++) // For loop to sleep for 10 seconds. 1 sec at a time
+            {                            // This way we can jump out of sleep quickly
                 sleep(1);
                 // cout << i << endl;
                 if (*flag == 1 || *flag == 2) // If something has been typed (1)
-                    break;                    // Or 'q' has been entered (2). Break outta here
+                    break;                    // Or 'quit' has been entered (2). Break outta here
             }
 
-            //If flag is 0 then there has been no activity
+            // If flag is 0 then there has been no activity
             if (*flag == 0)
             {
                 kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
 
-                write(pi[1], "no activity detected\n", strlen("no activity detected\n")); //Write this to the terminal
+                write(pi[1], "no activity detected\n", strlen("no activity detected\n")); // Write this to the terminal
             }
 
-            //If flag is 2 then 'q' was entered and its time to break outta here
+            // If flag is 2 then 'q' was entered and its time to break outta here
             if (*flag == 2)
             {
                 break;
@@ -85,24 +84,27 @@ int main()
     //  PARENT PROCESS          ///
     ///////////////////////////////
 
-    //make space for the incoming text
+    // make space for the incoming text
     char text[200];
-    
+
     close(pi[1]);
 
     for (;;) // infinite loop
     {
-        dup2(save_stdin, STDIN_FILENO); //Restor STDIN for keyboard to work again
+        dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
 
         int ra = read(STDIN_FILENO, &text[1], 100); // how many bytes we really read
 
-        *flag = 1; //Set the flag to 1 cuz we are writing now!
+        *flag = 1; // Set the flag to 1 cuz we are writing now!
 
-        changetext(text, ra); //Change the text to add "!" to front and back
+        changetext(text, ra); // Change the text to add "!" to front and back
 
-        if (text[1] == 'q') // *** type 'q' to quit ***
+        if (text[1] == 'q' &&  // *** type 'quit' to quit ***
+            text[2] == 'u' &&
+            text[3] == 'i' &&
+            text[4] == 't') 
         {
-            *flag = 2; //set flag to 2 and get outta dodge
+            *flag = 2; // set flag to 2 and get outta dodge
             break;
         }
     }
@@ -111,7 +113,7 @@ int main()
 
     close(pi[0]);
 
-    munmap(flag, sizeof(int)); //clean up space
+    munmap(flag, sizeof(int)); // clean up space
 
     return 0;
 }
