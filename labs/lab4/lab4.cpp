@@ -50,7 +50,7 @@ int main()
         for (;;)
         {
             close(pi[0]);
-            *flag = 0; //Set flag to 0. So if after 10 seconds its still in active
+            *flag = 0; //Set flag to 0. So if after 10 seconds its still inactive
                        //The if (flag == 0) is run
 
             for (int i = 1; i < 11; i++) //For loop to sleep for 10 seconds. 1 sec at a time
@@ -67,7 +67,6 @@ int main()
                 kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
 
                 write(pi[1], "no activity detected\n", strlen("no activity detected\n")); //Write this to the terminal
-               
             }
 
             //If flag is 2 then 'q' was entered and its time to break outta here
@@ -86,7 +85,8 @@ int main()
     ///////////////////////////////
 
     //make space for the incoming text
-    char text[1000];
+    char text[200];
+    
     close(pi[1]);
 
     for (;;) // infinite loop
@@ -99,20 +99,16 @@ int main()
 
         changetext(text, ra); //Change the text to add "!" to front and back
 
-        if (text[1] == 'q') // just working for 'q' so far
+        if (text[1] == 'q') // type 'q' to quit
         {
             *flag = 2; //set flag to 2 and get outta dodge
             break;
         }
     }
 
-   
-
     wait(0);
 
-    *flag = 0;
-
-     close(pi[0]);
+    close(pi[0]);
 
     munmap(flag, sizeof(int)); //clean up space
 
