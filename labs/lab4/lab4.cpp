@@ -13,6 +13,7 @@ using namespace std;
 // GLOBAL VARS AND HEADERS  ///
 ///////////////////////////////
 
+
 int pi[2];
 
 void signalfct(int i);
@@ -99,7 +100,7 @@ int main()
 
         changetext(text, ra); //Change the text to add "!" to front and back
 
-        if (text[1] == 'q') // type 'q' to quit
+        if (text[1] == 'q') // *** type 'q' to quit ***
         {
             *flag = 2; //set flag to 2 and get outta dodge
             break;
