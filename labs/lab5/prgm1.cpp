@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <fcntl.h>
+#include <iostream>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
-
-typedef unsigned char BYTE;
+#include <string.h>
+#include <string>
 
 int main()
 {
