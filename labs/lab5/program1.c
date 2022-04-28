@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-// int fd;
-// int fd[1];
-
 typedef unsigned char BYTE;
 
 int main()
@@ -18,13 +15,13 @@ int main()
     ///////////////////////////////
 
     //Create a Named Shared Memory and set that to fd
-    int fd = shm_open("sharedMem", O_CREAT | O_RDWR, 0600);
+    int fd = shm_open("sharedMem", O_CREAT | O_RDWR, 0777);
 
     //Allot the space
-    ftruncate(fd, 100);
+    ftruncate(fd, 200);
 
     //Byte pointer to actually take in the input
-    BYTE *input = (BYTE *)mmap(NULL, 100, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    BYTE *input = (BYTE *)mmap(NULL, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     ///////////////////////////////
     //  READ INPUT              ///
@@ -34,7 +31,7 @@ int main()
     //IF user enters "quit" then break out
     for (;;)
     {
-        read(STDIN_FILENO, input, 100);
+        read(STDIN_FILENO, input, 200);
 
         if (input[0] == 'q' && input[1] == 'u' && input[2] == 'i' && input[3] == 't')
         {
@@ -47,7 +44,7 @@ int main()
     ///////////////////////////////
     close(fd);
     shm_unlink("sharedMem");
-    munmap(input, 100);
+    munmap(input, 200);
 
     return 0;
 }
