@@ -34,8 +34,7 @@ int main()
 
 
     //Make space for recieving input from user on THIS programs virtual mem
-
-    // BYTE *input = (BYTE *)mmap(NULL, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    
      char *input = (char *)mmap(NULL, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     // Constanly check the input, waiting until there is something to print out

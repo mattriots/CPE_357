@@ -21,7 +21,7 @@ int main()
     //Allot the space
     ftruncate(fd, 200);
 
-    //Byte pointer to actually take in the input
+    //Char pointer to actual space
     char *input = (char *)mmap(NULL, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     // Set first chart in input to NULL
