@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <unistd.h>
+#include <time.h>
 
 using namespace std;
 
@@ -26,9 +27,9 @@ int main()
 {
     // cout << &startofheap << endl;
     // BYTE *a[100];
-    // // // // for(int i = 0; i < 10; i++){
-    // // // //    a[i] = mymalloc(1000);
-    // // // // }
+    // // // for(int i = 0; i < 10; i++){
+    // // //    a[i] = mymalloc(1000);
+    // // // }
     // a[1] = mymalloc(1000);
     // a[2] = mymalloc(1000);
     // a[3] = mymalloc(1000);
@@ -48,6 +49,27 @@ int main()
     for (int i = 0; i < 90; i++)
         myfree(a[i]);
     analyze();
+    myfree(a[95]);
+    myfree(a[96]);
+    analyze();
+    a[95] = mymalloc(1000);
+    analyze();
+    for (int i = 90; i < 100; i++)
+        myfree(a[i]);
+    analyze(); // 25% should be
+
+    // BYTE *a[100];
+    // clock_t ca, cb;
+    // for (int i = 0; i < 100; i++)
+    //     a[i] = mymalloc(1000);
+    // for (int i = 0; i < 90; i++)
+    //     myfree(a[i]);
+    // myfree(a[95]);
+    // a[95] = mymalloc(1000);
+    // for (int i = 90; i < 100; i++)
+    //     myfree(a[i]);
+    // cb = clock();
+    // printf("\nduration: % f\n", (double)(cb - ca));
 }
 
 BYTE *mymalloc(int size)
@@ -73,23 +95,61 @@ BYTE *mymalloc(int size)
         return startofheap + sizeof(chunkinfo);
     }
 
-    // So we need to search through all the mem we have so far
-    // And if there is any room to fit the requested size mem
-    // If so we want to find the smallest possible spot to put it
-    //
+    BYTE *start = startofheap;
+    chunkinfo *st = (chunkinfo *)start;
+
+    BYTE *mem = NULL;
+    chunkinfo *m = (chunkinfo *)mem;
+
+    int min = 500000;
+
+    for (; st->next; st = (chunkinfo *)st->next)
+    {
+        // cout << start->size << endl;
+        if (st->inuse == 0 && st->size >= size && st->size < min)
+        {
+            min = st->size;
+            m = st;
+        }
+    }
+
+    if (m != NULL)
+    {
+        if ((m->size - size) > PAGESIZE)
+        {
+            int minsize = 0;
+            while (size > minsize)
+            {
+                minsize += PAGESIZE;
+            }
+
+            BYTE * other = (BYTE*)m + minsize;
+            chunkinfo *o = (chunkinfo*) other;
+            o->size = m->size - minsize;
+            o->inuse = 0;
+            o->prev = (BYTE*) m;
+            o->next = m->next;
+
+            m->size = minsize;
+            m->next = (BYTE*) o;
+        }
+        m->inuse = 1;
+        return (BYTE *)m + sizeof(chunkinfo);
+    }
 
     // So far this just makes new chunks at the end of the current chunk
     BYTE *chunk = (BYTE *)sbrk(PAGESIZE);
     // This gets the last chunk in the list
 
-    chunkinfo *last = get_last_chunk();
+    // chunkinfo *last = get_last_chunk();
     chunkinfo *ch = (chunkinfo *)chunk;
 
-    last->next = chunk;
+    // last->next = chunk;
+    st->next = chunk;
 
     ch->size = PAGESIZE;
     ch->inuse = 1;
-    ch->prev = (BYTE *)last;
+    ch->prev = (BYTE *)st;
     ch->next = NULL;
 
     return chunk + sizeof(chunkinfo);
@@ -139,9 +199,6 @@ void myfree(BYTE *addr)
         return;
     }
 
-    // Setting up vars to represent the prev and next 4k mem chunks
-    // That the current chunk is CONNECTED TO...NOT next to
-
     // chunk above and below are free
     if (prev != NULL && prev->inuse == 0 && next->inuse == 0 && next->size != NULL && prev->size != NULL)
     {
@@ -176,17 +233,6 @@ void myfree(BYTE *addr)
 
         return;
     }
-
-    // If it makes it thorugh all the if statements somehow we can still set the prev/next here
-    // if (prev == NULL)
-    // {
-    //     next->prev = NULL;
-    // }
-    // else
-    // {
-    //     prev->next = ch->next;
-    //     next->prev = ch->prev;
-    // }
 }
 
 chunkinfo *get_last_chunk() // you can change it when you aim for performance
