@@ -4,12 +4,13 @@
 
 using namespace std;
 
+#define PAGESIZE 4096
 typedef unsigned char BYTE;
 
 BYTE *startofheap = NULL;
 
 BYTE *mymalloc(int size);
-BYTE *myfree(BYTE *addr);
+void myfree(BYTE *addr);
 void analyze();
 
 struct chunkinfo
@@ -23,29 +24,34 @@ chunkinfo *get_last_chunk();
 
 int main()
 {
-    cout << &startofheap << endl;
+    // cout << &startofheap << endl;
+    // BYTE *a[100];
+    // // // // for(int i = 0; i < 10; i++){
+    // // // //    a[i] = mymalloc(1000);
+    // // // // }
+    // a[1] = mymalloc(1000);
+    // a[2] = mymalloc(1000);
+    // a[3] = mymalloc(1000);
+    // a[4] = mymalloc(1000);
+    // // a[5] = mymalloc(1000);
+    // analyze();
+    // myfree(a[1]);
+    // myfree(a[2]);
+    // myfree(a[4]);
+    // myfree(a[3]);
+    // analyze();
+
     BYTE *a[100];
-    // for(int i = 0; i < 10; i++){
-    //    a[i] = mymalloc(1000);
-    // }
-    // analyze();
-    a[1] = mymalloc(1000);
-    // analyze();
-    a[2] = mymalloc(1000);
-    // analyze();
-    a[3] = mymalloc(1000);
-    a[4] = mymalloc(1000);
-    a[5] = mymalloc(1000);
-    analyze();
-    myfree(a[2]);
-    myfree(a[4]);
-    myfree(a[3]);
+    analyze(); // 50% points
+    for (int i = 0; i < 100; i++)
+        a[i] = mymalloc(1000);
+    for (int i = 0; i < 90; i++)
+        myfree(a[i]);
     analyze();
 }
 
 BYTE *mymalloc(int size)
 {
-    size = 4096;
 
     // Very first chunk
     if (!startofheap)
@@ -53,12 +59,12 @@ BYTE *mymalloc(int size)
 
         // Set the start of the heap to be the address of the first spot
         // Then the program break moves down "size" amount
-        startofheap = (BYTE *)sbrk(size);
+        startofheap = (BYTE *)sbrk(PAGESIZE);
         chunkinfo *ch = (chunkinfo *)startofheap; // Reservers 24 bytes
                                                   // at top of new memblock for chunkinfo
 
         // Set all the vars within chunkinfo
-        ch->size = size;
+        ch->size = PAGESIZE;
         ch->inuse = 1;
         ch->next = NULL;
         ch->prev = NULL;
@@ -66,64 +72,121 @@ BYTE *mymalloc(int size)
         // Returns the address of the startof chunk AFTER chunkinfo
         return startofheap + sizeof(chunkinfo);
     }
-    else
-    {
 
-        // So far this just makes new chunks at the end of the current chunk
-        BYTE *chunk = (BYTE *)sbrk(size);
-        chunkinfo *last = get_last_chunk();
-        chunkinfo *ch = (chunkinfo *)chunk;
+    // So we need to search through all the mem we have so far
+    // And if there is any room to fit the requested size mem
+    // If so we want to find the smallest possible spot to put it
+    //
 
-        last->next = chunk;
+    // So far this just makes new chunks at the end of the current chunk
+    BYTE *chunk = (BYTE *)sbrk(PAGESIZE);
+    // This gets the last chunk in the list
 
-        ch->size = size;
-        ch->inuse = 1;
-        ch->prev = (BYTE *)last;
-        ch->next = NULL;
+    chunkinfo *last = get_last_chunk();
+    chunkinfo *ch = (chunkinfo *)chunk;
 
-        return chunk + sizeof(chunkinfo);
-    }
+    last->next = chunk;
+
+    ch->size = PAGESIZE;
+    ch->inuse = 1;
+    ch->prev = (BYTE *)last;
+    ch->next = NULL;
+
+    return chunk + sizeof(chunkinfo);
 }
 
-BYTE *myfree(BYTE *addr)
-{
+// void for now...but do we want to have it return addresses of free spaces!?!?!
 
+void myfree(BYTE *addr)
+{
+    // setting ch to be the beginning of chunk info: with the addr -1
+    // Then sets the inuse to 0
     chunkinfo *ch = (chunkinfo *)addr - 1;
     ch->inuse = 0;
+
+    // If this is the last mem chunk
+    // Then "a" will be past the current page break
+    // So we set the prev-> next to be null and move page break up
     chunkinfo *prev = (chunkinfo *)ch->prev;
     chunkinfo *next = (chunkinfo *)ch->next;
 
-    BYTE * above = addr - 4096;
-    BYTE * below = addr + 4096;
-    chunkinfo *abo = (chunkinfo *)above - 1;
-    chunkinfo *bel = (chunkinfo *)below - 1;
+    if (next == NULL && prev != NULL && prev->inuse == 0)
+    {
+        prev->next = NULL;
+        prev->size = prev->size + ch->size;
+
+        (BYTE *)sbrk(-prev->size);
+
+        if (sbrk(0) <= startofheap)
+        {
+            startofheap = NULL;
+        }
+
+        return;
+    }
+
+    if (next == NULL)
+    {
+        prev->next = NULL;
+
+        (BYTE *)sbrk(-ch->size);
+
+        if (sbrk(0) < startofheap)
+        {
+            startofheap = NULL;
+        }
+
+        return;
+    }
+
+    // Setting up vars to represent the prev and next 4k mem chunks
+    // That the current chunk is CONNECTED TO...NOT next to
 
     // chunk above and below are free
-    if (abo->inuse == 0 && bel->inuse == 0)
+    if (prev != NULL && prev->inuse == 0 && next->inuse == 0 && next->size != NULL && prev->size != NULL)
     {
-        cout << "before and after is free" << endl;
+        // cout << "before and after is free" << endl;
+        prev->size = prev->size + next->size + ch->size;
+        prev->next = ch->next;
+        next->prev = ch->prev;
+
+        return;
     }
+
     // chunk before is free
-    if (abo->inuse == 0)
+    if (prev != NULL && prev->inuse == 0 && prev->size != NULL)
     {
-        cout << "before is free" << endl;
-        //join it with the one above it
-        //combine their sizes
-        //make sure it links to the right one
+        // cout << "before is free" << endl;
+        prev->size = prev->size + ch->size;
+
+        prev->next = ch->next;
+        next->prev = ch->prev;
+
+        return;
     }
+
     // chunk after is free
-    if (bel->inuse == 0)
+    if (next != NULL && next->inuse == 0 && next->size != NULL)
     {
-        cout << " after is free" << endl;
+        // cout << " after is free" << endl;
+        next->size = next->size + ch->size;
+
+        prev->next = ch->next;
+        next->prev = ch->prev;
+
+        return;
     }
 
-    prev->next = ch->next;
-    next->prev = ch->prev;
-
-    // 2. merge with after
-    // 3. merge with before and after
-    // 4. is it at the end of the list
-    /////yes? sbrk - p->size;
+    // If it makes it thorugh all the if statements somehow we can still set the prev/next here
+    // if (prev == NULL)
+    // {
+    //     next->prev = NULL;
+    // }
+    // else
+    // {
+    //     prev->next = ch->next;
+    //     next->prev = ch->prev;
+    // }
 }
 
 chunkinfo *get_last_chunk() // you can change it when you aim for performance
@@ -142,6 +205,7 @@ void analyze()
     if (!startofheap)
     {
         printf("no heap");
+        printf(", program break on address: %x\n", sbrk(0));
         return;
     }
     chunkinfo *ch = (chunkinfo *)startofheap;
