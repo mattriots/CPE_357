@@ -10,6 +10,8 @@
 
 using namespace std;
 
+typedef unsigned char BYTE;
+
 struct listelem{
     int size;
     int occ;
