@@ -25,38 +25,43 @@ chunkinfo *get_last_chunk();
 
 int main()
 {
-    // cout << &startofheap << endl;
-    // BYTE *a[100];
-    // // // for(int i = 0; i < 10; i++){
-    // // //    a[i] = mymalloc(1000);
-    // // // }
-    // a[1] = mymalloc(1000);
-    // a[2] = mymalloc(1000);
-    // a[3] = mymalloc(1000);
-    // a[4] = mymalloc(1000);
-    // // a[5] = mymalloc(1000);
-    // analyze();
-    // myfree(a[1]);
-    // myfree(a[2]);
-    // myfree(a[4]);
-    // myfree(a[3]);
+    cout << &startofheap << endl;
+    BYTE *a[100];
+    // for (int i = 0; i < 8; i++)
+    // {
+    //     a[i] = mymalloc(1000);
+    // }
+    a[1] = mymalloc(10000);
+    a[2] = mymalloc(400);
+    a[3] = mymalloc(3);
+    a[4] = mymalloc(95304);
+    a[5] = mymalloc(1000);
+    analyze();
+    myfree(a[1]);
+    myfree(a[2]);
+    myfree(a[3]);
+    myfree(a[5]);
+    analyze();
+
+    // BYTE *addr = mymalloc(100);
+
+    // cout << *addr << endl;
+
     // analyze();
 
-    BYTE *a[100];
-    analyze(); // 50% points
-    for (int i = 0; i < 100; i++)
-        a[i] = mymalloc(1000);
-    for (int i = 0; i < 90; i++)
-        myfree(a[i]);
-    analyze();
-    myfree(a[95]);
-    myfree(a[96]);
-    analyze();
-    a[95] = mymalloc(1000);
-    analyze();
-    for (int i = 90; i < 100; i++)
-        myfree(a[i]);
-    analyze(); // 25% should be
+    // BYTE *a[100];
+    // analyze(); // 50% points
+    // for (int i = 0; i < 100; i++)
+    //     a[i] = mymalloc(1000);
+    // for (int i = 0; i < 90; i++)
+    //     myfree(a[i]);
+    // analyze();
+    // myfree(a[95]);
+    // a[95] = mymalloc(1000);
+    // analyze();
+    // for (int i = 90; i < 100; i++)
+    //     myfree(a[i]);
+    // analyze(); // 25% should be
 
     // BYTE *a[100];
     // clock_t ca, cb;
@@ -74,6 +79,9 @@ int main()
 
 BYTE *mymalloc(int size)
 {
+    int neededbytes = size + sizeof(chunkinfo);
+    int pagesneed = neededbytes / PAGESIZE + 1;
+    int realneed = pagesneed * PAGESIZE;
 
     // Very first chunk
     if (!startofheap)
@@ -81,12 +89,12 @@ BYTE *mymalloc(int size)
 
         // Set the start of the heap to be the address of the first spot
         // Then the program break moves down "size" amount
-        startofheap = (BYTE *)sbrk(PAGESIZE);
+        startofheap = (BYTE *)sbrk(realneed);
         chunkinfo *ch = (chunkinfo *)startofheap; // Reservers 24 bytes
                                                   // at top of new memblock for chunkinfo
 
         // Set all the vars within chunkinfo
-        ch->size = PAGESIZE;
+        ch->size = realneed;
         ch->inuse = 1;
         ch->next = NULL;
         ch->prev = NULL;
@@ -105,40 +113,39 @@ BYTE *mymalloc(int size)
 
     for (; st->next; st = (chunkinfo *)st->next)
     {
-        // cout << start->size << endl;
-        if (st->inuse == 0 && st->size >= size && st->size < min)
+        if (st->inuse == 0 && st->size >= realneed && st->size < min)
         {
             min = st->size;
             m = st;
+
+            if (min == 4096)
+            {
+                break;
+            }
         }
     }
 
     if (m != NULL)
     {
-        if ((m->size - size) > PAGESIZE)
+        if ((m->size - realneed) > 0)
         {
-            int minsize = 0;
-            while (size > minsize)
-            {
-                minsize += PAGESIZE;
-            }
 
-            BYTE * other = (BYTE*)m + minsize;
-            chunkinfo *o = (chunkinfo*) other;
-            o->size = m->size - minsize;
+            BYTE *other = (BYTE *)m + realneed;
+            chunkinfo *o = (chunkinfo *)other;
+            o->size = m->size - realneed;
             o->inuse = 0;
-            o->prev = (BYTE*) m;
+            o->prev = (BYTE *)m;
             o->next = m->next;
 
-            m->size = minsize;
-            m->next = (BYTE*) o;
+            m->size = realneed;
+            m->next = (BYTE *)o;
         }
         m->inuse = 1;
         return (BYTE *)m + sizeof(chunkinfo);
     }
 
     // So far this just makes new chunks at the end of the current chunk
-    BYTE *chunk = (BYTE *)sbrk(PAGESIZE);
+    BYTE *chunk = (BYTE *)sbrk(realneed);
     // This gets the last chunk in the list
 
     // chunkinfo *last = get_last_chunk();
@@ -147,7 +154,7 @@ BYTE *mymalloc(int size)
     // last->next = chunk;
     st->next = chunk;
 
-    ch->size = PAGESIZE;
+    ch->size = realneed;
     ch->inuse = 1;
     ch->prev = (BYTE *)st;
     ch->next = NULL;
