@@ -42,7 +42,8 @@ struct tagBITMAPINFOHEADER
 
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
-void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int width, int height, float ratio);
+void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio);
+BYTE get_red(BYTE *pix, float x, float y, int width, int height);
 
 int main(int argc, char **argv)
 {
@@ -51,47 +52,93 @@ int main(int argc, char **argv)
     // VARIABLES, SETUP, CLI INPUT    //
     ///////////////////////////////////
 
-
     // char *fileInNameBig = argv[1];
     // char *fileInNameSmall = argv[2];
     // float ratio = stof(argv[3]);
     // char *fileOut = argv[4];
 
-    char *fileInNameBig = "lion.bmp";
-    char *fileInNameSmall = "wolf.bmp";
-    float ratio = .5;
+    char *fileInName1 = "lion.bmp";
+    char *fileInName2 = "flowers.bmp";
+    float ratio = 0.5;
     char *fileOut = "image.bmp";
 
+    tagBIGMAPFILEHEADER fh1; // Struct var for big fileheaders
+    tagBITMAPINFOHEADER fih1;
 
-    tagBIGMAPFILEHEADER fhbig; // Struct var for big fileheaders
-    tagBITMAPINFOHEADER fihbig;
+    tagBIGMAPFILEHEADER fh2; // Struct var for small fileheaders
+    tagBITMAPINFOHEADER fih2;
 
-    tagBIGMAPFILEHEADER fhsmall; // Struct var for small fileheaders
-    tagBITMAPINFOHEADER fihsmall;
+    FILE *fileIn1 = fopen(fileInName1, "rb"); // Open Big pic
+    inFile(fh1, fih1, fileIn1);               // Read in all the header data from file
 
-    FILE *fileInBig = fopen(fileInNameBig, "rb"); // Open Big pic
-    inFile(fhbig, fihbig, fileInBig);          // Read in all the header data from file
-
-    FILE *fileInSmall = fopen(fileInNameSmall, "rb"); // Open small pic
-    inFile(fhsmall, fihsmall, fileInSmall);      // Read in all the header data from file
+    FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
+    inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
 
     ///// local variables //Bigger picture
-    int isizebig = fihbig.biSizeImage; // size of image
-    int widthbig = fihbig.biWidth * 3; // Width in bytes
-    int heightbig = fihbig.biHeight;   // Height in pixels
+    int isizebig = fih1.biSizeImage; // size of image
+    int widthbig = fih1.biWidth * 3; // Width in bytes
+    int heightbig = fih1.biHeight;   // Height in pixels
 
     ///// local variables //Smaller picture
-    int isizesmall = fihsmall.biSizeImage; // size of image
-    int widthsmall = fihsmall.biWidth * 3; // Width in bytes
-    int heightsmall = fihsmall.biHeight;   // Height in pixels
+    int isizesmall = fih2.biSizeImage; // size of image
+    int widthsmall = fih2.biWidth * 3; // Width in bytes
+    int heightsmall = fih2.biHeight;   // Height in pixels
+
+    // Figure out which has biggest widgth
+    // Guess had to fix all these varibales
+    // If first width is bigger we change 1st to big, 2nd to small
+    // Else change 2nd one to big and 1st to small
+
+    // int isizebig, widthbig, heightbig, isizesmall, widthsmall, heightsmall;
+    // FILE *fileInBig, *fileInSmall;
+    tagBIGMAPFILEHEADER fhbig, fhsmall;
+    tagBITMAPINFOHEADER fihbig, fihsmall;
+    FILE *fileInBig;
+    FILE *fileInSmall;
+
+    if (fih1.biWidth >= fih2.biWidth)
+    {
+        ///// local variables //Bigger picture
+        int isizebig = fih1.biSizeImage; // size of image
+        int widthbig = fih1.biWidth * 3; // Width in bytes
+        int heightbig = fih1.biHeight;   // Height in pixels
+        fileInBig = fileIn1;
+        fhbig = fh1;
+        fihbig = fih1;
+
+        ///// local variables //Smaller picture
+        int isizesmall = fih2.biSizeImage; // size of image
+        int widthsmall = fih2.biWidth * 3; // Width in bytes
+        int heightsmall = fih2.biHeight;   // Height in pixels
+        fileInSmall = fileIn2;
+        fhsmall = fh2;
+        fihsmall = fih2;
+    }
+    else
+    {
+        ///// local variables //Bigger picture
+        int isizebig = fih2.biSizeImage; // size of image
+        int widthbig = fih2.biWidth * 3; // Width in bytes
+        int heightbig = fih2.biHeight;   // Height in pixels
+        fileInBig = fileIn2;
+        fhbig = fh2;
+        fihbig = fih2;
+
+        ///// local variables //Smaller picture
+        int isizesmall = fih1.biSizeImage; // size of image
+        int widthsmall = fih1.biWidth * 3; // Width in bytes
+        int heightsmall = fih1.biHeight;   // Height in pixels
+        fileInSmall = fileIn1;
+        fhsmall = fh1;
+        fihsmall = fih1;
+    }
 
     // Need to make this the size of the bigger picture
-    //But making two seperate ones for now
+    // But making two seperate ones for now
     BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3); // making space for data storage
-                                                                //  This is where the altered data will live
+                                                                   //  This is where the altered data will live
 
     BYTE *datastoresmall = (BYTE *)malloc(widthsmall * heightsmall * 3); // making space for data storage
-    //                                                             //  This is where the altered data will live
 
     BYTE *pixbig = (BYTE *)mmap(NULL, isizebig, PROT_READ | PROT_WRITE, // Making space for pic data
                                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -99,13 +146,13 @@ int main(int argc, char **argv)
     BYTE *pixsmall = (BYTE *)mmap(NULL, isizesmall, PROT_READ | PROT_WRITE, // Making space for pic data
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    fread(pixbig, isizebig, 1, fileInBig);       // Read in pix data
+    fread(pixbig, isizebig, 1, fileInBig);     // Read in pix data
     fread(pixsmall, isizesmall, 1, fileInSmall); // Read in pix data
 
-    fclose(fileInBig);   // Close file (especially before fork)
-    fclose(fileInSmall); // Close file (especially before fork)
+    fclose(fileIn1); // Close file
+    fclose(fileIn2); // Close file
 
-    blend(pixbig, pixsmall, datastorebig, widthbig, heightbig, ratio);
+    blend(pixbig, pixsmall, datastorebig, widthbig, heightbig, widthsmall, heightsmall, ratio);
 
     outFile(fhbig, fihbig, datastorebig, "result.bmp"); // Write file out
     // outFile(fhsmall, fihsmall, pixsmall, "smalldic.bmp"); // Write file out
@@ -114,36 +161,119 @@ int main(int argc, char **argv)
     munmap(pixsmall, isizesmall);
     free(datastorebig);
     free(datastoresmall);
-
 }
 
-void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int width, int height, float ratio)
+BYTE get_blue(BYTE *pix, float x, float y, int width, int height)
+{
+    int x_left = (int)x;
+    int x_right = x_left + 1;
+    int y_down = (int)y;
+    int y_up = y_down + 1;
+    int dx = x - x_left;
+    int dy = y - y_down;
+    BYTE leftup, rightup, leftdown, rightdown, left, right, result;
+
+    leftup = pix[(width * y_up) + x_left * 3 + 2];
+    leftdown = pix[(width * y_down) + x_left * 3 + 2];
+    rightup = pix[(width * y_up) + x_right * 3 + 2];
+    rightdown = pix[(width * y_down) + x_right * 3 + 2];
+
+    left = leftup * (1 - dy) + leftdown * dy;
+    right = rightup * (1 - dy) + rightdown * dy;
+    result = left * dx + right * (1 - dx);
+
+    return result;
+}
+
+BYTE get_green(BYTE *pix, float x, float y, int width, int height)
+{
+    int x_left = (int)x;
+    int x_right = x_left + 1;
+    int y_down = (int)y;
+    int y_up = y_down + 1;
+    int dx = x - x_left;
+    int dy = y - y_down;
+    BYTE leftup, rightup, leftdown, rightdown, left, right, result;
+
+    leftup = pix[(width * y_up) + x_left * 3 + 2];
+    leftdown = pix[(width * y_down) + x_left * 3 + 2];
+    rightup = pix[(width * y_up) + x_right * 3 + 2];
+    rightdown = pix[(width * y_down) + x_right * 3 + 2];
+
+    left = leftup * (1 - dy) + leftdown * dy;
+    right = rightup * (1 - dy) + rightdown * dy;
+    result = left * dx + right * (1 - dx);
+
+    return result;
+}
+
+BYTE get_red(BYTE *pix, float x, float y, int width, int height)
+{
+    int x_left = (int)x;
+    int x_right = x_left + 1;
+    int y_down = (int)y;
+    int y_up = y_down + 1;
+    int dx = x - x_left;
+    int dy = y - y_down;
+    BYTE leftup, rightup, leftdown, rightdown, left, right, result;
+
+    leftup = pix[(width * y_up) + x_left * 3 + 2];
+    leftdown = pix[(width * y_down) + x_left * 3 + 2];
+    rightup = pix[(width * y_up) + x_right * 3 + 2];
+    rightdown = pix[(width * y_down) + x_right * 3 + 2];
+
+    left = leftup * (1 - dy) + leftdown * dy;
+    right = rightup * (1 - dy) + rightdown * dy;
+    result = left * dx + right * (1 - dx);
+
+    return result;
+}
+
+void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio)
 {
 
+    float widthratio = (float)widthsmall / (float)widthbig;
+    float heightratio = (float)heightsmall / (float)heightbig;
+    float x;
+    float y;
+
     // Ceiling function to catch padding problems
-    if ((width % 4 != 0))
+    if ((widthbig % 4 != 0))
     {
-        width += 4 - width % 4;
+        widthbig += 4 - widthbig % 4;
+    }
+    if ((widthsmall % 4 != 0))
+    {
+        widthsmall += 4 - widthsmall % 4;
     }
 
-    for (int j = 0; j < height; j++) // height or # of rows
+    for (int j = 0; j < heightbig; j++) // height or # of rows
     {
 
-        for (int i = 0; i < width; i++) // width or bytes per row
+        for (int i = 0; i < widthbig; i++) // width or bytes per row
         {
             BYTE b_big, g_big, r_big, b_small, g_small, r_small; // local BYTE variables to hold pix data
 
-            b_big = pixbig[(width * j) + i * 3 + 0];
-            g_big = pixbig[(width * j) + i * 3 + 1];
-            r_big = pixbig[(width * j) + i * 3 + 2];
+            b_big = pixbig[(widthbig * j) + i * 3 + 0];
+            g_big = pixbig[(widthbig * j) + i * 3 + 1];
+            r_big = pixbig[(widthbig * j) + i * 3 + 2];
 
-            b_small = pixsmall[(width * j) + i * 3 + 0];
-            g_small = pixsmall[(width * j) + i * 3 + 1];
-            r_small = pixsmall[(width * j) + i * 3 + 2];
+            // b_small = pixsmall[(width * j) + i * 3 + 0];
+            // g_small = pixsmall[(width * j) + i * 3 + 1];
+            // r_small = pixsmall[(width * j) + i * 3 + 2];
 
-            dataStore[(width * j) + i * 3 + 0] = b_big * ratio + b_small * (1-ratio);
-            dataStore[(width * j) + i * 3 + 1] = g_big * ratio + g_small * (1-ratio);
-            dataStore[(width * j) + i * 3 + 2] = r_big * ratio + r_small * (1-ratio);
+            x = i * widthratio;
+            y = j * heightratio;
+
+            // b_small = pixsmall[(width * j) + i * 3 + 0];
+            // g_small = pixsmall[(width * j) + i * 3 + 1];
+            b_small = get_blue(pixsmall, x, y, widthsmall, heightsmall);
+            g_small = get_green(pixsmall, x, y, widthsmall, heightsmall);
+            r_small = get_red(pixsmall, x, y, widthsmall, heightsmall);
+
+            dataStore[(widthbig * j) + i * 3 + 0] = b_big * ratio + b_small * (1 - ratio);
+            dataStore[(widthbig * j) + i * 3 + 1] = g_big * ratio + g_small * (1 - ratio);
+            dataStore[(widthbig * j) + i * 3 + 2] = r_big * ratio + r_small * (1 - ratio);
         }
     }
 }

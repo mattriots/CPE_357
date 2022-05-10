@@ -1,1 +1,1 @@
-    // fclose(fileInSmall); // Close file (especially before fork)
+int isizebig, widthbig, heightbig, isizesmall, widthsmall, heightsmall;
