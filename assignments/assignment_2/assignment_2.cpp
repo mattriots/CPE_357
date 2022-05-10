@@ -37,116 +37,111 @@ struct tagBITMAPINFOHEADER
     DWORD biClrUsed;      // number of colors used by bitmap
     DWORD biClrImportant; // number of colors that are important
 };
-
+void manPage();
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
-void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio);
+// void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio);
+void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int width1, int height1, int width2, int height2, float ratio);
 BYTE get_red(BYTE *pix, float x, float y, int width, int height);
 
 int main(int argc, char **argv)
 {
 
+    // Need to make it so the first and second files stay intact
+    //  so the proper ratio can be applied to each.
+    // BUT need to still extract info from the biggest one
+
     ////////////////////////////////////
     // VARIABLES, SETUP, CLI INPUT    //
     ///////////////////////////////////
+    int param = argc;
 
-    char *fileInName1 = argv[1];
-    char *fileInName2 = argv[2];
-    float ratio = stof(argv[3]);
-    char *fileOut = argv[4];
-
-    // char *fileInName1 = "flowers.bmp";
-    // char *fileInName2 = "wolf.bmp";
-    // float ratio = .5;
-    // char *fileOut = "image.bmp";
-
-    tagBIGMAPFILEHEADER fh1; // Struct var for first fileheaders
-    tagBITMAPINFOHEADER fih1;
-
-    tagBIGMAPFILEHEADER fh2; // Struct var for second fileheaders
-    tagBITMAPINFOHEADER fih2;
-
-    FILE *fileIn1 = fopen(fileInName1, "rb"); // Open first pic
-    inFile(fh1, fih1, fileIn1);               // Read in all the header data from file
-
-    FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
-    inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
-
-    // Figure out which has biggest widgth
-    // Guess had to fix all these varibales
-    // If first width is bigger we change 1st to big, 2nd to small
-    // Else change 2nd one to big and 1st to small
-
-    int isizebig, widthbig, heightbig, isizesmall, widthsmall, heightsmall;
-    FILE *fileInBig, *fileInSmall;
-    tagBIGMAPFILEHEADER fhbig, fhsmall;
-    tagBITMAPINFOHEADER fihbig, fihsmall;
-
-    if (fih1.biWidth >= fih2.biWidth)
+    if (argc != 5)
     {
-        ///// local variables //Bigger picture
-        isizebig = fih1.biSizeImage; // size of image
-        widthbig = fih1.biWidth * 3; // Width in bytes
-        heightbig = fih1.biHeight;   // Height in pixels
-        fileInBig = fileIn1;
-        fhbig = fh1;
-        fihbig = fih1;
-
-        ///// local variables //Smaller picture
-        isizesmall = fih2.biSizeImage; // size of image
-        widthsmall = fih2.biWidth * 3; // Width in bytes
-        heightsmall = fih2.biHeight;   // Height in pixels
-        fileInSmall = fileIn2;
-        fhsmall = fh2;
-        fihsmall = fih2;
+        manPage();
     }
     else
     {
-        ///// local variables //Bigger picture
-        isizebig = fih2.biSizeImage; // size of image
-        widthbig = fih2.biWidth * 3; // Width in bytes
-        heightbig = fih2.biHeight;   // Height in pixels
-        fileInBig = fileIn2;
-        fhbig = fh2;
-        fihbig = fih2;
 
-        ///// local variables //Smaller picture
-        isizesmall = fih1.biSizeImage; // size of image
-        widthsmall = fih1.biWidth * 3; // Width in bytes
-        heightsmall = fih1.biHeight;   // Height in pixels
-        fileInSmall = fileIn1;
-        fhsmall = fh1;
-        fihsmall = fih1;
-    }
+        char *fileInName1 = argv[1];
+        char *fileInName2 = argv[2];
+        float ratio = stof(argv[3]);
+        char *fileOut = argv[4];
 
-    // Need to make this the size of the bigger picture
-    // But making two seperate ones for now
-    BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3); // making space for data storage
-                                                                   //  This is where the altered data will live
+        // char *fileInName1 = "flowers.bmp";
+        // char *fileInName2 = "lion.bmp";
+        // float ratio = .5;
+        // char *fileOut = "image.bmp";
 
-    BYTE *datastoresmall = (BYTE *)malloc(widthsmall * heightsmall * 3); // making space for data storage
+        tagBIGMAPFILEHEADER fh1; // Struct var for first fileheaders
+        tagBITMAPINFOHEADER fih1;
 
-    BYTE *pixbig = (BYTE *)mmap(NULL, isizebig, PROT_READ | PROT_WRITE, // Making space for pic data
-                                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        tagBIGMAPFILEHEADER fh2; // Struct var for second fileheaders
+        tagBITMAPINFOHEADER fih2;
 
-    BYTE *pixsmall = (BYTE *)mmap(NULL, isizesmall, PROT_READ | PROT_WRITE, // Making space for pic data
+        FILE *fileIn1 = fopen(fileInName1, "rb"); // Open first pic
+        inFile(fh1, fih1, fileIn1);               // Read in all the header data from file
+
+        FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
+        inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
+
+        // Figure out which has biggest widgth
+        // If first width is bigger we change 1st to big, 2nd to small
+        // Else change 2nd one to big and 1st to small
+
+        int isize1, width1, height1, isize2, width2, height2, widthbig, heightbig;
+        tagBIGMAPFILEHEADER fhbig;
+        tagBITMAPINFOHEADER fihbig;
+
+        isize1 = fih1.biSizeImage;
+        width1 = fih1.biWidth * 3;
+        height1 = fih1.biHeight;
+
+        isize2 = fih2.biSizeImage;
+        width2 = fih2.biWidth * 3;
+        height2 = fih2.biHeight;
+
+        if (width1 >= width2)
+        {
+
+            widthbig = width1;   // Width in bytes
+            heightbig = height1; // Height in pixels
+            fhbig = fh1;
+            fihbig = fih1;
+        }
+        else
+        {
+            widthbig = width2;   // Width in bytes
+            heightbig = height2; // Height in pixels
+            fhbig = fh2;
+            fihbig = fih2;
+        }
+
+        // Need to make this the size of the bigger picture
+        BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3); // making space for data storage
+                                                                       //  This is where the altered data will live
+
+        BYTE *pix1 = (BYTE *)mmap(NULL, isize1, PROT_READ | PROT_WRITE, // Making space for pic data
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    fread(pixbig, isizebig, 1, fileInBig);     // Read in pix data
-    fread(pixsmall, isizesmall, 1, fileInSmall); // Read in pix data
+        BYTE *pix2 = (BYTE *)mmap(NULL, isize2, PROT_READ | PROT_WRITE, // Making space for pic data
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    fclose(fileIn1); // Close file
-    fclose(fileIn2); // Close file
+        fread(pix1, isize1, 1, fileIn1); // Read in pix data
+        fread(pix2, isize2, 1, fileIn2); // Read in pix data
 
-    blend(pixbig, pixsmall, datastorebig, widthbig, heightbig, widthsmall, heightsmall, ratio);
+        fclose(fileIn1); // Close file
+        fclose(fileIn2); // Close file
 
-    outFile(fhbig, fihbig, datastorebig, fileOut); // Write file out
-    // outFile(fhsmall, fihsmall, pixsmall, "smalldic.bmp"); // Write file out
+        blend(pix1, pix2, datastorebig, width1, height1, width2, height2, ratio);
 
-    munmap(pixbig, isizebig);
-    munmap(pixsmall, isizesmall);
-    free(datastorebig);
-    free(datastoresmall);
+        outFile(fhbig, fihbig, datastorebig, fileOut); // Write file out
+
+        munmap(pix1, isize1);
+        munmap(pix2, isize2);
+        free(datastorebig);
+        return 0;
+    }
 }
 
 BYTE get_blue(BYTE *pix, float x, float y, int width, int height)
@@ -215,12 +210,35 @@ BYTE get_red(BYTE *pix, float x, float y, int width, int height)
     return result;
 }
 
-//Fix this up so that 1st_image * ratio
-// And 2nd_image *(1-ratio)
-//And still keep track of what the bigger file is
+// Fix this up so that 1st_image * ratio
+//  And 2nd_image *(1-ratio)
+// And still keep track of what the bigger file is
 
-void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio)
+void blend(BYTE *pix1, BYTE *pix2, BYTE *dataStore, int width1, int height1, int width2, int height2, float ratio)
 {
+    int widthbig, heightbig, widthsmall, heightsmall, ratioselect;
+    BYTE *pixbig, *pixsmall;
+
+    if (width1 >= width2)
+    {
+        widthbig = width1;
+        heightbig = height1;
+        widthsmall = width2;
+        heightsmall = height2;
+        pixbig = pix1;
+        pixsmall = pix2;
+        ratioselect = 1;
+    }
+    else
+    {
+        widthbig = width2;
+        heightbig = height2;
+        widthsmall = width1;
+        heightsmall = height1;
+        pixbig = pix2;
+        pixsmall = pix1;
+        ratioselect = 2;
+    }
 
     float widthratio = (float)widthsmall / (float)widthbig;
     float heightratio = (float)heightsmall / (float)heightbig;
@@ -236,7 +254,6 @@ void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heig
     {
         widthsmall += 4 - widthsmall % 4;
     }
-
     for (int j = 0; j < heightbig; j++) // height or # of rows
     {
 
@@ -255,9 +272,19 @@ void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heig
             g_small = get_green(pixsmall, x, y, widthsmall, heightsmall);
             r_small = get_red(pixsmall, x, y, widthsmall, heightsmall);
 
-            dataStore[(widthbig * j) + i * 3 + 0] = b_big * ratio + b_small * (1 - ratio);
-            dataStore[(widthbig * j) + i * 3 + 1] = g_big * ratio + g_small * (1 - ratio);
-            dataStore[(widthbig * j) + i * 3 + 2] = r_big * ratio + r_small * (1 - ratio);
+            if (ratioselect == 1)
+            {
+                dataStore[(widthbig * j) + i * 3 + 0] = b_big * ratio + b_small * (1 - ratio);
+                dataStore[(widthbig * j) + i * 3 + 1] = g_big * ratio + g_small * (1 - ratio);
+                dataStore[(widthbig * j) + i * 3 + 2] = r_big * ratio + r_small * (1 - ratio);
+            }
+            else
+            {
+
+                dataStore[(widthbig * j) + i * 3 + 0] = b_big * (1 - ratio) + b_small * ratio;
+                dataStore[(widthbig * j) + i * 3 + 1] = g_big * (1 - ratio) + g_small * ratio;
+                dataStore[(widthbig * j) + i * 3 + 2] = r_big * (1 - ratio) + r_small * ratio;
+            }
         }
     }
 }
@@ -308,4 +335,10 @@ void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *dataStore,
     int isize = fih.biSizeImage;
     fwrite(dataStore, isize, 1, outFile);
     fclose(outFile);
+}
+
+void manPage()
+{
+    cout << "you fucked up man" << endl;
+    return;
 }

@@ -1,1 +1,2 @@
-int isizebig, widthbig, heightbig, isizesmall, widthsmall, heightsmall;
+            // if (ratioselect == 1)
+            // {
