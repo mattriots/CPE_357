@@ -1,0 +1,1 @@
+    // fclose(fileInSmall); // Close file (especially before fork)
