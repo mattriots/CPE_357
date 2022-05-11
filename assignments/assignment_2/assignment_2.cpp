@@ -37,7 +37,7 @@ struct tagBITMAPINFOHEADER
     DWORD biClrUsed;      // number of colors used by bitmap
     DWORD biClrImportant; // number of colors that are important
 };
-void manPage();
+void manPage(int argc);
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
 // void blend(BYTE *pixbig, BYTE *pixsmall, BYTE *dataStore, int widthbig, int heightbig, int widthsmall, int heightsmall, float ratio);
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 
     if (argc != 5)
     {
-        manPage();
+        manPage(argc);
     }
     else
     {
@@ -85,9 +85,6 @@ int main(int argc, char **argv)
         FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
         inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
 
-        // Figure out which has biggest widgth
-        // If first width is bigger we change 1st to big, 2nd to small
-        // Else change 2nd one to big and 1st to small
 
         int isize1, width1, height1, isize2, width2, height2, widthbig, heightbig;
         tagBIGMAPFILEHEADER fhbig;
@@ -140,6 +137,7 @@ int main(int argc, char **argv)
         munmap(pix1, isize1);
         munmap(pix2, isize2);
         free(datastorebig);
+
         return 0;
     }
 }
@@ -209,10 +207,6 @@ BYTE get_red(BYTE *pix, float x, float y, int width, int height)
 
     return result;
 }
-
-// Fix this up so that 1st_image * ratio
-//  And 2nd_image *(1-ratio)
-// And still keep track of what the bigger file is
 
 void blend(BYTE *pix1, BYTE *pix2, BYTE *dataStore, int width1, int height1, int width2, int height2, float ratio)
 {
@@ -337,8 +331,12 @@ void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *dataStore,
     fclose(outFile);
 }
 
-void manPage()
+void manPage(int argc)
 {
-    cout << "you fucked up man" << endl;
+    cout << "You entered " << argc << " argument(s)" << endl;
+    cout << "You need to enter 5 arguments" << endl;
+    cout << "Usage: [program name] [imagefile1] [imagefile2] [ratio] [outfile]" << endl;
+    cout << endl;
+    cout << "Ex: ./assignment_2 jar.bmp lion.bmp 0.5 result.bmp" << endl;
     return;
 }
