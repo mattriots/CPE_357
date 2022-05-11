@@ -85,7 +85,6 @@ int main(int argc, char **argv)
         FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
         inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
 
-
         int isize1, width1, height1, isize2, width2, height2, widthbig, heightbig;
         tagBIGMAPFILEHEADER fhbig;
         tagBITMAPINFOHEADER fihbig;
@@ -115,14 +114,11 @@ int main(int argc, char **argv)
         }
 
         // Need to make this the size of the bigger picture
-        BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3); // making space for data storage
-                                                                       //  This is where the altered data will live
+        BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3);
 
-        BYTE *pix1 = (BYTE *)mmap(NULL, isize1, PROT_READ | PROT_WRITE, // Making space for pic data
-                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-        BYTE *pix2 = (BYTE *)mmap(NULL, isize2, PROT_READ | PROT_WRITE, // Making space for pic data
-                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        //Space for the 2 picture pixels
+        BYTE *pix1 = (BYTE *)malloc(isize1);  
+        BYTE *pix2 = (BYTE *)malloc(isize2);
 
         fread(pix1, isize1, 1, fileIn1); // Read in pix data
         fread(pix2, isize2, 1, fileIn2); // Read in pix data
@@ -134,9 +130,10 @@ int main(int argc, char **argv)
 
         outFile(fhbig, fihbig, datastorebig, fileOut); // Write file out
 
-        munmap(pix1, isize1);
-        munmap(pix2, isize2);
         free(datastorebig);
+        free(pix1);
+        free(pix2);
+
 
         return 0;
     }
