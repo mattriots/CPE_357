@@ -9,7 +9,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${fileDirname}/${fileBasenameNoExtension}",
-        "args": ["jar.bmp", "wolf.bmp", "0.5", "result.bmp"],
+        "args": ["jar.bmp", "flowers.bmp", "0.5", "result2.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

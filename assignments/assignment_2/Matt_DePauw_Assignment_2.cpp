@@ -106,7 +106,7 @@ int main(int argc, char **argv)
         // Need to make this the size of the bigger picture
         BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3);
 
-        //Space for the 2 picture pixels
+        // Space for the 2 picture pixels
         BYTE *pix1 = (BYTE *)malloc(isize1);
         BYTE *pix2 = (BYTE *)malloc(isize2);
 
@@ -143,9 +143,9 @@ BYTE get_blue(BYTE *pix, float x, float y, int width, int height)
     rightup = pix[(width * y_up) + x_right * 3 + 0];
     rightdown = pix[(width * y_down) + x_right * 3 + 0];
 
-    left = leftup * (1 - dy) + leftdown * dy;
-    right = rightup * (1 - dy) + rightdown * dy;
-    result = left * dx + right * (1 - dx);
+    left = leftup * dy + leftdown * (1 - dy);
+    right = rightup * dy + rightdown * (1 - dy);
+    result = left * (1 - dx) + right * dx;
 
     return result;
 }
@@ -165,10 +165,9 @@ BYTE get_green(BYTE *pix, float x, float y, int width, int height)
     rightup = pix[(width * y_up) + x_right * 3 + 1];
     rightdown = pix[(width * y_down) + x_right * 3 + 1];
 
-    left = leftup * (1 - dy) + leftdown * dy;
-    right = rightup * (1 - dy) + rightdown * dy;
-    result = left * dx + right * (1 - dx);
-
+    left = leftup * dy + leftdown * (1 - dy);
+    right = rightup * dy + rightdown * (1 - dy);
+    result = left * (1 - dx) + right * dx;
     return result;
 }
 
@@ -187,9 +186,9 @@ BYTE get_red(BYTE *pix, float x, float y, int width, int height)
     rightup = pix[(width * y_up) + x_right * 3 + 2];
     rightdown = pix[(width * y_down) + x_right * 3 + 2];
 
-    left = leftup * (1 - dy) + leftdown * dy;
-    right = rightup * (1 - dy) + rightdown * dy;
-    result = left * dx + right * (1 - dx);
+    left = leftup * dy + leftdown * (1 - dy);
+    right = rightup * dy + rightdown * (1 - dy);
+    result = left * (1 - dx) + right * dx;
 
     return result;
 }

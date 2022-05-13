@@ -111,8 +111,8 @@ int main(int argc, char **argv)
         // Need to make this the size of the bigger picture
         BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3);
 
-        //Space for the 2 picture pixels
-        BYTE *pix1 = (BYTE *)malloc(isize1);  
+        // Space for the 2 picture pixels
+        BYTE *pix1 = (BYTE *)malloc(isize1);
         BYTE *pix2 = (BYTE *)malloc(isize2);
 
         fread(pix1, isize1, 1, fileIn1); // Read in pix data
@@ -128,7 +128,6 @@ int main(int argc, char **argv)
         free(datastorebig);
         free(pix1);
         free(pix2);
-
 
         return 0;
     }
@@ -174,7 +173,6 @@ BYTE get_green(BYTE *pix, float x, float y, int width, int height)
     left = leftup * (1 - dy) + leftdown * dy;
     right = rightup * (1 - dy) + rightdown * dy;
     result = left * dx + right * (1 - dx);
-
     return result;
 }
 
