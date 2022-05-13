@@ -63,11 +63,6 @@ int main(int argc, char **argv)
         float ratio = stof(argv[3]);
         char *fileOut = argv[4];
 
-        // char *fileInName1 = "flowers.bmp";
-        // char *fileInName2 = "lion.bmp";
-        // float ratio = .5;
-        // char *fileOut = "image.bmp";
-
         tagBIGMAPFILEHEADER fh1; // Struct var for first fileheaders
         tagBITMAPINFOHEADER fih1;
 
@@ -112,7 +107,7 @@ int main(int argc, char **argv)
         BYTE *datastorebig = (BYTE *)malloc(widthbig * heightbig * 3);
 
         //Space for the 2 picture pixels
-        BYTE *pix1 = (BYTE *)malloc(isize1);  
+        BYTE *pix1 = (BYTE *)malloc(isize1);
         BYTE *pix2 = (BYTE *)malloc(isize2);
 
         fread(pix1, isize1, 1, fileIn1); // Read in pix data
@@ -128,7 +123,6 @@ int main(int argc, char **argv)
         free(datastorebig);
         free(pix1);
         free(pix2);
-
 
         return 0;
     }
