@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <dirent.h>
+#include <cstring>
 
 using namespace std;
 
@@ -16,8 +17,16 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 
 int main()
 {
+    char workdir[1000];
+    char result [1000];
 
-    findfile("findme.txt", ".", "", 1);
+    getcwd(workdir, 1000);
+
+
+
+    findfile("findme.txt", workdir, result, 1);
+
+    cout << "findme.txt" << *result << endl;
 
     return 0;
 }
@@ -26,8 +35,6 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 {
     DIR *dir;
     struct dirent *entry;
-    char *entryname = entry->d_name;    // name of current file
-    int entrytype = (int)entry->d_type; // type of file
     char workdir[1000];
 
     // getcwd(workdir, 1000);
@@ -36,30 +43,35 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 
     dir = opendir(startdir);
 
-    cout << dir << endl;
-
     if (dir == NULL)
     {
-        cout << ""<< endl;
+        cout << "" << endl;
         return;
     }
 
-    if (entryname == filetofind)
+    if (entry->d_name == filetofind)
     {
         getcwd(result, 1000);
+        cout << "found it" << endl;
     }
 
     for (entry = readdir(dir); entry != NULL; entry = readdir(dir))
     {
         cout << entry->d_name << endl;
-        cout << (int)entry->d_type << endl;
+        // cout << (int)entry->d_type << endl;
         // showstat(entry->d_name);
         // directory = 4
         // search all dirs = 1 means seach all dirs
-        if (entry->d_type == 4 && search_in_all_subdirs == 1)
+        if (entry->d_type == 4 && search_in_all_subdirs == 1 && entry->d_name[0] != '.')
         {
+            strcat(startdir, "/");
+            // cout << startdir << endl;
+            strcat(startdir, entry->d_name);
+            // *startdir += *entryname;
 
-            findfile(filetofind, startdir + '/' + *entryname, result, search_in_all_subdirs);
+            // cout << startdir << endl;
+
+            findfile(filetofind, startdir, result, search_in_all_subdirs);
         }
     }
 
