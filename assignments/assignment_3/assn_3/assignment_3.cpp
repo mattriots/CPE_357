@@ -14,24 +14,33 @@ using namespace std;
 
 void showstat(char *filepath);
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs);
+void change(char *input);
 
 int main()
 {
     char workdir[1000];
-    char result [1000];
+    char result[1000];
+    char test[1000]; 
 
     getcwd(workdir, 1000);
 
-
-
     findfile("findme.txt", workdir, result, 1);
+    change(test);
 
-    cout << "findme.txt" << *result << endl;
+    char *ween = result;
+
+    cout << "findme.txt " << result << endl;
+    cout << "test " << test << endl;
 
     return 0;
 }
 
-void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs)
+void change(char *input)
+{
+    input = "suck it";
+}
+
+void findfile(char *filetofind, char *startdir, char result[], int search_in_all_subdirs)
 {
     DIR *dir;
     struct dirent *entry;
@@ -49,14 +58,17 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         return;
     }
 
-    if (entry->d_name == filetofind)
-    {
-        getcwd(result, 1000);
-        cout << "found it" << endl;
-    }
-
     for (entry = readdir(dir); entry != NULL; entry = readdir(dir))
     {
+        char *name = entry->d_name;
+
+        if (strcmp(name, filetofind) == 0)
+        {
+            result = startdir;
+            cout << "found it" << endl;
+            return;
+        }
+
         cout << entry->d_name << endl;
         // cout << (int)entry->d_type << endl;
         // showstat(entry->d_name);
@@ -76,6 +88,7 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
     }
 
     closedir(dir);
+    return;
 }
 
 // Show stat in here in case we wanna look at stats of files
