@@ -17,32 +17,24 @@ void showstat(char *filepath);
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs);
 void change(char *input);
 void signalfct(int i);
+void parse(char *text);
 
 // int pi[2];
 
 int main()
 {
-
     ///////////////////////////////
     //   SETUP AND VARS         ///
     ///////////////////////////////
+
     char workdir[1000];
     char result[1000];
-    result[0] = NULL; // to check if it's been changed later
-
-    int status;
-
-    char *filename = "findme.txt";
-    char *alldir = "/";
+    // to check if it's been changed later
 
     getcwd(workdir, 1000);
 
     // assign signalfct to be called by SIGUSR1
     signal(SIGUSR1, signalfct);
-
-    // you can make 2 pipes to do 2 way communication
-    // Just one for now
-    // pipe(pi);
 
     // Parent process id
     int parent_pid = getpid();
@@ -54,82 +46,67 @@ int main()
     int *flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
                             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    int *childs_pid = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
-                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
     char *text = (char *)mmap(NULL, 1000, PROT_READ | PROT_WRITE,
                               MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    int *childs_pid = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    text[0] = NULL;
+
+    int kidspid;
+    int status = 0;
 
     ///////////////////////////////
     //  FORK AND CHILD          ///
     ///////////////////////////////
 
-    for (int i = 0; i < 3; i++)
+    // if (fork() == 0)
+    // {
+    //     for (;;)
+    //     {
+
+    //         *flag = 0; // Set flag to 0. So if after 10 seconds its still inactive
+    //                    // The if (flag == 0) is run
+
+    //         // If flag is 0 then there has been no activity
+    //         if (text[0] != NULL)
+    //         {
+    //             // kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
+    //             printf("%s\n", "in child");
+
+    //             findfile(text, workdir, result, 1);
+
+    //             if (result[0] == NULL)
+    //             {
+    //                 cout << ">file not found<" << endl;
+    //             }
+    //             else
+    //             {
+    //                 cout << text << " " << result << endl;
+    //             }
+    //             break;
+    //         }
+
+    //         // If flag is 2 then 'q' was entered and its time to break outta here
+    //         if (*flag == 2)
+    //         {
+    //             break;
+    //         }
+    //     }
+
+    //     return 0;
+    // }
+
+    ///////////////////////////////
+    //  PARENT PROCESS          ///
+    ///////////////////////////////
+
+    for (;;) // infinite loop
     {
-        if (fork() == 0)
-        {
-            // for (;;)
-            // {
-            // close(pi[0]);
-            // *flag = 0; // Set flag to 0. So if after 10 seconds its still inactive
-            //            // The if (flag == 0) is run
-
-            // // If flag is 0 then there has been no activity
-            // if (*flag == 3)
-            // {
-            //     // kill(parent_pid, SIGUSR1); // Send the parent id the SIGURS1. Taking over the STDIN
-
-            //     // write(pi[1], "no activity detected\n", strlen("no activity detected\n")); // Write this to the terminal
-            //     printf(">nothing found<");
-            // }
-
-            // *childs_pid = getpid();
-
-            if (text[0] != NULL)
-            {
-                printf("in child\n");
-                printf("%s\n", text);
-                // break;
-            }
-
-            findfile(text, workdir, result, 1);
-
-            // if (result[0] == NULL)
-            // {
-            //     cout << ">file not found<" << endl;
-            // }
-            // else
-            // {
-            //     cout << text << " " << result << endl;
-            // }
-
-            // printf(result);
-
-            // if (*flag == 2)
-            // {
-            //     // break;
-            // }
-            // }
-
-            // close(pi[1]);
-            // return 0;
-        }
-
-        ///////////////////////////////
-        //  PARENT PROCESS          ///
-        ///////////////////////////////
-
-        // close(pi[1]);
-
-        sleep(1);
-
-        int kidspid;
-
-        // for (int i = 0; i < 3; i++) // infinite loop
-        // {
         // dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
 
-        // int ra = read(STDIN_FILENO, text, 100); // how many bytes we really read
+        // int ra = read(STDIN_FILENO, &text[1], 100); // how many bytes we really read
+        printf("findstuff$ ");
         scanf("%s", text);
 
         if (text[0] == 'q' && // *** type 'quit' to quit ***
@@ -141,27 +118,57 @@ int main()
             break;
         }
 
-        *childs_pid = fork();
-
-        kidspid = *childs_pid;
-
-        cout << "child's pid: " << kidspid << endl; // print out child pid
+        parse(&text[0]);
 
         // *flag = 1; // Set the flag to 1 cuz we are writing now!
+
+        result[0] = NULL;
+
+        findfile(text, workdir, result, 1);
+
+        if (result[0] == NULL)
+        {
+            printf(">file not found<\n");
+        }
+        // else
+        // {
+        //     cout << text << " " << result << endl;
         // }
+        // break;
 
-        waitpid(kidspid, &status, 0);
-
-        kill(kidspid, SIGKILL);
+        // *childs_pid = fork();
+        // kidspid = *childs_pid;
+        // cout << "child's pid: " << kidspid << endl; // print out child pid
+        // cout << "text" << text << endl;
     }
 
-    // close(pi[0]);
+    waitpid(kidspid, &status, 0);
+
+    kill(kidspid, SIGKILL);
 
     munmap(flag, sizeof(int)); // clean up space
-    munmap(childs_pid, sizeof(int));
     munmap(text, 1000);
+    munmap(childs_pid, sizeof(int));
 
     return 0;
+}
+
+void parse(char *text)
+{
+
+    if (text[0] != 'f' && // *** type 'quit' to quit ***
+        text[1] != 'i' &&
+        text[2] != 'n' &&
+        text[3] != 'd')
+    {
+        printf("invalid input. try again");
+    }
+       if (text != "find")
+    {
+        printf("invalid input. try again");
+    }
+
+    if(text[])
 }
 
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs)
@@ -183,14 +190,14 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         // cout <<"startdir: " << startdir << endl;
 
         char *name = entry->d_name;
-        cout << name << endl;
+        // cout << name << endl;
         // showstat(entry->d_name);
 
         if (strcmp(name, filetofind) == 0)
         {
             strcpy(result, startdir);
-            cout << "found it" << endl;
-            cout << startdir << endl;
+            // cout << "found it" << endl;
+            cout << filetofind << " " << startdir << endl;
             return;
         }
 
