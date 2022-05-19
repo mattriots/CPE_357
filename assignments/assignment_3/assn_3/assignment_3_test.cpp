@@ -11,13 +11,15 @@
 #include <dirent.h>
 #include <cstring>
 
+#define BUFFERSIZE 1000
+
 using namespace std;
 
 void showstat(char *filepath);
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs);
 void change(char *input);
 void signalfct(int i);
-void parse(char *text);
+void parseArgs(char *args, char **arg_tokens);
 
 // int pi[2];
 
@@ -29,7 +31,11 @@ int main()
 
     char workdir[1000];
     char result[1000];
-    // to check if it's been changed later
+    char args[BUFFERSIZE];
+    char *arg_tokens[10] = {0};
+    result[0] = NULL; // to check if it's been changed later
+
+    char *alldir = "/";
 
     getcwd(workdir, 1000);
 
@@ -46,12 +52,12 @@ int main()
     int *flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
                             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    char *text = (char *)mmap(NULL, 1000, PROT_READ | PROT_WRITE,
-                              MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    // char *text = (char *)mmap(NULL, 1000, PROT_READ | PROT_WRITE,
+    //                           MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     int *childs_pid = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    text[0] = NULL;
+    // text[0] = NULL;
 
     int kidspid;
     int status = 0;
@@ -107,24 +113,56 @@ int main()
 
         // int ra = read(STDIN_FILENO, &text[1], 100); // how many bytes we really read
         printf("findstuff$ ");
-        scanf("%s", text);
+        // scanf("%s", args);
+        fgets(args, BUFFERSIZE, stdin);
 
-        if (text[0] == 'q' && // *** type 'quit' to quit ***
-            text[1] == 'u' &&
-            text[2] == 'i' &&
-            text[3] == 't')
+        args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
+                                       // Thus cleaning up the args array after each input. nice.
+
+        parseArgs(args, arg_tokens);
+
+        if (arg_tokens[0][0] == 'q' && // *** type 'quit' to quit ***
+            arg_tokens[0][1] == 'u' &&
+            arg_tokens[0][2] == 'i' &&
+            arg_tokens[0][3] == 't')
         {
             *flag = 2; // set flag to 2 and get outta dodge
             break;
         }
 
-        parse(&text[0]);
+        printf("0: %s\n", arg_tokens[0]);
+        printf("1: %s\n", arg_tokens[1]);
+        printf("2: %s\n", arg_tokens[2]);
+
+        // Decision for where to search and how deep
+
+        if (arg_tokens[2] == NULL || arg_tokens[2] == "")     //No flag we will just seach in the current directory
+        {
+
+            findfile(arg_tokens[1], workdir, result, 0);
+        }
+
+        else if (arg_tokens[2][0] == '-' &&             //-s flag -> search in current and all sub dirs
+                 arg_tokens[2][1] == 's')
+        {
+
+            findfile(arg_tokens[1], workdir, result, 1);
+        }
+        else if (arg_tokens[2][0] == '-' &&            //-f -> search in all dires
+                 arg_tokens[2][1] == 'f')
+        {
+            findfile(arg_tokens[1], alldir, result, 1);
+        }
+        else{
+            printf("not a valid flag\n");
+            printf("Usage: find [filename] [flag]\n");
+            printf("Flags:\n");
+            printf("-s: search in current dir and all sub-dirs\n");
+            printf("-f: search in all dirs starting at '/'\n");
+            printf("no flag: search in current dir only\n\n");
+        }
 
         // *flag = 1; // Set the flag to 1 cuz we are writing now!
-
-        result[0] = NULL;
-
-        findfile(text, workdir, result, 1);
 
         if (result[0] == NULL)
         {
@@ -140,35 +178,33 @@ int main()
         // kidspid = *childs_pid;
         // cout << "child's pid: " << kidspid << endl; // print out child pid
         // cout << "text" << text << endl;
+
+        for(int i = 0; i < 10; i++){    //zero out the array so theres no left overs between searches
+            arg_tokens[i] = 0;
+        }
     }
 
-    waitpid(kidspid, &status, 0);
+    // waitpid(kidspid, &status, 0);
 
-    kill(kidspid, SIGKILL);
+    // kill(kidspid, SIGKILL);
 
     munmap(flag, sizeof(int)); // clean up space
-    munmap(text, 1000);
     munmap(childs_pid, sizeof(int));
 
     return 0;
 }
 
-void parse(char *text)
+void parseArgs(char *args, char **arg_tokens)
 {
+    int num_args = 0;                // number of args entered
+    char *token = strtok(args, " "); // String tokenizer. Arg and space delimeter
 
-    if (text[0] != 'f' && // *** type 'quit' to quit ***
-        text[1] != 'i' &&
-        text[2] != 'n' &&
-        text[3] != 'd')
+    while (token != NULL)
     {
-        printf("invalid input. try again");
+        arg_tokens[num_args] = token;
+        token = strtok(NULL, " ");
+        num_args++;
     }
-       if (text != "find")
-    {
-        printf("invalid input. try again");
-    }
-
-    if(text[])
 }
 
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs)
@@ -204,6 +240,7 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         // directory = 4
         // search all dirs = 1 means seach all dirs
         // check to make sure we dont look into any of the '.' or '..' folders
+        // But do i need to account for hidden folders with "," before their name?!?
         if (entry->d_type == 4 && search_in_all_subdirs == 1 && entry->d_name[0] != '.')
         {
             char nextdir[1000];
