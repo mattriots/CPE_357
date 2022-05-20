@@ -91,6 +91,7 @@ int main()
 
     for (;;) // infinite loop
     {
+
         dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
 
         int ra = read(STDIN_FILENO, &text[1], 100); // how many bytes we really read

@@ -14,6 +14,7 @@
 #define BUFFERSIZE 1000
 
 using namespace std;
+
 int pi[2];
 void showstat(char *filepath);
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs);
@@ -21,13 +22,21 @@ void change(char *input);
 void signalfct(int i);
 void parseArgs(char *args, char **arg_tokens);
 
-
-
 int main()
 {
     ///////////////////////////////
     //   SETUP AND VARS         ///
     ///////////////////////////////
+
+    signal(SIGUSR1, signalfct);
+
+    pipe(pi);
+
+    // Parent process id
+    int parent_pid = getpid();
+
+    // Save stdin behavior for later
+    int save_stdin = dup(STDIN_FILENO);
 
     char workdir[BUFFERSIZE];
     char result[BUFFERSIZE];
@@ -39,17 +48,6 @@ int main()
     char *alldir = "/";
 
     getcwd(workdir, 1000);
-
-    // assign signalfct to be called by SIGUSR1
-    signal(SIGUSR1, signalfct);
-
-    pipe(pi);
-
-    // Parent process id
-    int parent_pid = getpid();
-
-    // Save stdin behavior for later
-    int save_stdin = dup(STDIN_FILENO);
 
     // Have to mmap some memory for the parent/child to share
     int *flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
@@ -68,88 +66,29 @@ int main()
     int kidspid;
     int status = 0;
 
-
-    ///////////////////////////////
-    //  FORK AND CHILD          ///
-    ///////////////////////////////
-
-    if (fork() == 0)
-    {
-
-        sleep(2);
-        close(pi[0]);
-
-        // for (;;)
-        // {
-
-        // Decision for where to search and how deep
-        *childs_pid = getpid();
-
-        kill(parent_pid, SIGUSR1);
-
-        write(pi[1], "hello", 6);
-
-        if (flagchar == NULL || flagchar == "") // No flag we will just seach in the current directory
-        {
-
-            write(pi[1], "noflag\n", strlen("noflag\n"));
-            findfile(filetofind, workdir, result, 0);
-        }
-
-        else if (flagchar[0] == '-' && //-s flag -> search in current and all sub dirs
-                 flagchar[1] == 's')
-        {
-            write(pi[1], "sflag\n", strlen("sflag\n"));
-
-            findfile(filetofind, workdir, result, 1);
-        }
-        else if (flagchar[0] == '-' && //-f -> search in all dires
-                 flagchar[1] == 'f')
-        {
-            write(pi[1], "fflag\n", strlen("fflag\n"));
-            findfile(filetofind, alldir, result, 1);
-        }
-        else
-        {
-            printf("not a valid flag\n");
-            printf("Usage: find [filename] [flag]\n");
-            printf("Flags:\n");
-            printf("-s: search in current dir and all sub-dirs\n");
-            printf("-f: search in all dirs starting at '/'\n");
-            printf("no flag: search in current dir only\n\n");
-        }
-
-        if (result[0] == NULL)
-        {
-            printf(">file not found<\n");
-        }
-        // If flag is 2 then 'q' was entered and its time to break outta here
-        // if (*flag == 2)
-        // {
-        //     break;
-        // }
-        // }
-
-        close(pi[1]);
-        return 0;
-    }
-
+    char findtext[30];
+    char text[100];
 
     ///////////////////////////////
     //  PARENT PROCESS          ///
     ///////////////////////////////
 
-    close(pi[1]);
-
     for (;;) // infinite loop
     {
+
+        close(pi[1]);
+
         // sleep(2);
+
+        write(STDERR_FILENO, "findstuff$", 11);
+
+        read(STDIN_FILENO, args, BUFFERSIZE);
 
         dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
 
-        printf("findstuff$");
+        // printf("%s\n", findtext);
 
-        int ra = read(STDIN_FILENO, args, 100); // how many bytes we really read
+        // int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
 
         args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
                                        // Thus cleaning up the args array after each input. nice.
@@ -174,27 +113,87 @@ int main()
         filetofind = arg_tokens[1];
         flagchar = arg_tokens[2];
 
-        // *flag = 1; // Set the flag to 1 cuz we are writing now!
+        ///////////////////////////////
+        //  FORK AND CHILD          ///
+        ///////////////////////////////
 
-        // *childs_pid = fork();
-        kidspid = *childs_pid;
-        cout << "child's pid: " << kidspid << endl; // print out child pid
-        // cout << "text" << text << endl;
+        if (strcmp(arg_tokens[0], "find") == 0)
+        {
 
-        for (int i = 0; i < 10; i++)
-        { // zero out the array so theres no left overs between searches
-            arg_tokens[i] = 0;
+            if (fork() == 0)
+            {
+
+                // sleep(2);
+                close(pi[0]);
+
+                *childs_pid = getpid();
+
+                kidspid = *childs_pid;
+
+                if (flagchar == NULL || flagchar == "") // No flag we will just seach in the current directory
+                {
+                    // findfile(filetofind, workdir, result, 0);
+                    kill(getppid(), SIGUSR1);
+                    write(pi[1], "noflag\n", strlen("noflag\n"));
+                }
+
+                else if (flagchar[0] == '-' && //-s flag -> search in current and all sub dirs
+                         flagchar[1] == 's')
+                {
+                    // findfile(filetofind, workdir, result, 1);
+                    kill(getppid(), SIGUSR1);
+                    write(pi[1], "sflag\n", strlen("sflag\n"));
+                }
+                else if (flagchar[0] == '-' && //-f -> search in all dires
+                         flagchar[1] == 'f')
+                {
+
+                    // findfile(filetofind, alldir, result, 1);
+                    kill(getppid(), SIGUSR1);
+                    write(pi[1], "fflag\n", strlen("fflag\n"));
+                }
+                else
+                {
+                    printf("not a valid flag\n");
+                    printf("Usage: find [filename] [flag]\n");
+                    printf("Flags:\n");
+                    printf("-s: search in current dir and all sub-dirs\n");
+                    printf("-f: search in all dirs starting at '/'\n");
+                    printf("no flag: search in current dir only\n\n");
+                }
+
+                // if (result[0] == NULL)
+                // {
+                //     printf(">file not found<\n");
+                // }
+
+                close(pi[1]);
+
+                // printf("%s\n", result);
+
+                return 0;
+            }
+
+            // cout << *childs_pid << endl;
+
+            // zero out the array so theres no left overs between searches
+            // for (int i = 0; i < 10; i++)
+            //     arg_tokens[i] = 0;
+
+            waitpid(kidspid, &status, 0);
+            if (kidspid != 0)
+            {
+                kill(kidspid, SIGKILL);
+            }
         }
-
-        waitpid(kidspid, &status, 0);
-        kill(kidspid, SIGKILL);
     }
 
-    // close(pi[0]);
     munmap(flag, sizeof(int)); // clean up space
     munmap(childs_pid, sizeof(int));
     munmap(flagchar, 10); // clean up space
     munmap(filetofind, 100);
+
+    close(pi[0]);
 
     return 0;
 }
@@ -238,10 +237,10 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         {
             strcpy(result, startdir);
             // cout << "found it" << endl;
-            write(pi[1], filetofind, strlen(filetofind));
+            // write(pi[1], filetofind, strlen(filetofind));
             write(pi[1], startdir, strlen(startdir));
             // cout << filetofind << " " << startdir << endl;
-            return;
+            break;
         }
 
         // directory = 4
@@ -266,6 +265,8 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 void signalfct(int i)
 {
     dup2(pi[0], STDIN_FILENO);
+
+    printf("is this working\n");
 }
 
 // Show stat in here in case we wanna look at stats of files
