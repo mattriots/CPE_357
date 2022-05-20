@@ -21,6 +21,7 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 void change(char *input);
 void signalfct(int i);
 void parseArgs(char *args, char **arg_tokens);
+void pidarr(int *child_pids, int pid, int op, int childcount);
 
 int main()
 {
@@ -42,7 +43,7 @@ int main()
     char result[BUFFERSIZE];
     char args[BUFFERSIZE];
     char *arg_tokens[10] = {0};
-    int *child_pids[10] = {0};
+    int child_pids[10] = {0};
     result[0] = NULL; // to check if it's been changed later
 
     char *alldir = "/";
@@ -50,8 +51,8 @@ int main()
     getcwd(workdir, 1000);
 
     // Have to mmap some memory for the parent/child to share
-    int *flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
-                            MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    char *firstarg = (char *)mmap(NULL, 100, PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     char *filetofind = (char *)mmap(NULL, 100, PROT_READ | PROT_WRITE,
                                     MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -61,99 +62,115 @@ int main()
 
     int *childs_pid = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    int *childcount = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     // text[0] = NULL;
 
-    int kidspid;
     int status = 0;
 
     char findtext[30];
     char text[100];
+    childcount = 0;
 
     ///////////////////////////////
     //  PARENT PROCESS          ///
     ///////////////////////////////
 
+    // close(pi[1]);
+
     for (;;) // infinite loop
     {
 
-        close(pi[1]);
-
         // sleep(2);
 
-        write(STDERR_FILENO, "findstuff$", 11);
+        write(STDIN_FILENO, "findstuff$", 11);
 
-        read(STDIN_FILENO, args, BUFFERSIZE);
+        int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
+
+        args[ra] = '\0';
+
+        printf("%s\n", args);
 
         dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
-
-        // printf("%s\n", findtext);
-
-        // int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
 
         args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
                                        // Thus cleaning up the args array after each input. nice.
 
         parseArgs(args, arg_tokens);
+        // Using mmap variables to child can read too
+        firstarg = arg_tokens[0];
+        filetofind = arg_tokens[1];
+        flagchar = arg_tokens[2];
 
         /// Printing for now - to read
         // printf("0: %s\n", arg_tokens[0]);
         // printf("1: %s\n", arg_tokens[1]);
         // printf("2: %s\n", arg_tokens[2]);
 
-        if (arg_tokens[0][0] == 'q' && // *** type 'quit' to quit ***
-            arg_tokens[0][1] == 'u' &&
-            arg_tokens[0][2] == 'i' &&
-            arg_tokens[0][3] == 't')
+        if (strcmp(firstarg, "quit") == 0)
         {
-            *flag = 2; // set flag to 2 and get outta dodge
-            break;
+            kill(*childs_pid, SIGKILL);
+            waitpid(*childs_pid, &status, WNOHANG);
+            return 0;
         }
-
-        // Using mmap variables to child can read too
-        filetofind = arg_tokens[1];
-        flagchar = arg_tokens[2];
 
         ///////////////////////////////
         //  FORK AND CHILD          ///
         ///////////////////////////////
 
-        if (strcmp(arg_tokens[0], "find") == 0)
+        ///NEED TO FIGURE OUT HOW TO HANDLE CHILDREN THE BEST!
+        //ARRAY!? or just count!?  But the numbers always change within the children process
+        //Ponder this
+
+        if (strcmp(firstarg, "find") == 0 || strcmp(firstarg, "quit") == 0)
         {
 
+            printf("childcount outside: ");
+            printf("%d\n", childcount);
             if (fork() == 0)
             {
 
-                // sleep(2);
+                sleep(10);
                 close(pi[0]);
-
                 *childs_pid = getpid();
+                childcount++;
 
-                kidspid = *childs_pid;
+                printf("childcount begin: ");
+                printf("%d\n", childcount);
+                // pidarr(child_pids, *childs_pid, 1, *childcount);
+
+                // cout << "im inside a child" << endl;
+
+                // // kidspid = *childs_pid;
 
                 if (flagchar == NULL || flagchar == "") // No flag we will just seach in the current directory
                 {
-                    // findfile(filetofind, workdir, result, 0);
-                    kill(getppid(), SIGUSR1);
-                    write(pi[1], "noflag\n", strlen("noflag\n"));
+
+                    findfile(filetofind, workdir, result, 0);
+                    kill(parent_pid, SIGUSR1);
+                    write(pi[1], strcat(result, "\0"), strlen(strcat(result, "\0")));
                 }
 
                 else if (flagchar[0] == '-' && //-s flag -> search in current and all sub dirs
                          flagchar[1] == 's')
                 {
-                    // findfile(filetofind, workdir, result, 1);
-                    kill(getppid(), SIGUSR1);
-                    write(pi[1], "sflag\n", strlen("sflag\n"));
+
+                    findfile(filetofind, workdir, result, 1);
+                    kill(parent_pid, SIGUSR1);
+                    write(pi[1], strcat(result, "\0"), strlen(strcat(result, "\0")));
                 }
                 else if (flagchar[0] == '-' && //-f -> search in all dires
                          flagchar[1] == 'f')
                 {
 
-                    // findfile(filetofind, alldir, result, 1);
-                    kill(getppid(), SIGUSR1);
-                    write(pi[1], "fflag\n", strlen("fflag\n"));
+                    findfile(filetofind, alldir, result, 1);
+                    kill(parent_pid, SIGUSR1);
+                    write(pi[1], strcat(result, "\0"), strlen(strcat(result, "\0")));
                 }
+
                 else
-                {
+                { // NEEED TO FIX THIS....Put it into write? Make it simpler...//
                     printf("not a valid flag\n");
                     printf("Usage: find [filename] [flag]\n");
                     printf("Flags:\n");
@@ -162,33 +179,31 @@ int main()
                     printf("no flag: search in current dir only\n\n");
                 }
 
-                // if (result[0] == NULL)
-                // {
-                //     printf(">file not found<\n");
-                // }
+                if (result[0] == NULL)
+                {
+                    write(pi[1], "> no file found < \n\0", strlen("> no file found < \n\0"));
+                }
 
                 close(pi[1]);
 
-                // printf("%s\n", result);
-
+                result[0] = NULL; // Zero out result so there's a clean pipe everytime ?
+                childcount--;
+                printf("childcount end: ");
+                printf("%d\n", childcount);
                 return 0;
             }
 
-            // cout << *childs_pid << endl;
-
             // zero out the array so theres no left overs between searches
-            // for (int i = 0; i < 10; i++)
-            //     arg_tokens[i] = 0;
-
-            waitpid(kidspid, &status, 0);
-            if (kidspid != 0)
-            {
-                kill(kidspid, SIGKILL);
-            }
+            for (int i = 0; i < 10; i++)
+                arg_tokens[i] = 0;
         }
+
+        waitpid(*childs_pid, &status, WNOHANG);
+
+        // pidarr(child_pids, *childs_pid, 0, *childcount);
     }
 
-    munmap(flag, sizeof(int)); // clean up space
+    // munmap(flag, sizeof(int)); // clean up space
     munmap(childs_pid, sizeof(int));
     munmap(flagchar, 10); // clean up space
     munmap(filetofind, 100);
@@ -196,6 +211,50 @@ int main()
     close(pi[0]);
 
     return 0;
+}
+
+void pidarr(int *child_pids, int pid, int op, int childcount)
+{
+
+    if (childcount == 10)
+    {
+        printf("you have too many children. pls wait");
+        return;
+    }
+    /// Remove pid
+    if (op == 0)
+    {
+        printf("removing a child");
+        for (int i = 0; i < 10; i++)
+        {
+            printf("%d\n", child_pids[i]);
+            if (child_pids[i] == pid)
+            {
+                child_pids[i] = 0;
+                childcount--;
+                printf("childcount: ");
+                printf("%d\n", childcount);
+            }
+        }
+    }
+
+    // Add pid
+    else
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            printf("adding a child");
+            if (child_pids[i] == 0)
+            {
+                printf("%d\n", child_pids[i]);
+                child_pids[i] = pid;
+                childcount++;
+                printf("childcount: ");
+                printf("%d\n", childcount);
+                break;
+            }
+        }
+    }
 }
 
 void parseArgs(char *args, char **arg_tokens)
@@ -227,19 +286,19 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 
     for (entry = readdir(dir); entry != NULL; entry = readdir(dir))
     {
-        // cout <<"startdir: " << startdir << endl;
 
         char *name = entry->d_name;
-        // cout << name << endl;
-        // showstat(entry->d_name);
 
         if (strcmp(name, filetofind) == 0)
         {
-            strcpy(result, startdir);
-            // cout << "found it" << endl;
-            // write(pi[1], filetofind, strlen(filetofind));
-            write(pi[1], startdir, strlen(startdir));
-            // cout << filetofind << " " << startdir << endl;
+            // strcpy(result, startdir);
+            strcat(result, filetofind);
+            strcat(result, "\t");
+            strcat(result, startdir);
+            strcat(result, "\n");
+
+            // kill(getppid(), SIGUSR1);
+            // write(pi[1], strcat(startdir, "\n\0"), strlen(strcat(startdir, "\n\0")));
             break;
         }
 
@@ -266,7 +325,7 @@ void signalfct(int i)
 {
     dup2(pi[0], STDIN_FILENO);
 
-    printf("is this working\n");
+    // printf("is this working\n");
 }
 
 // Show stat in here in case we wanna look at stats of files

@@ -1,4 +1,4 @@
-    munmap(flag, sizeof(int)); // clean up space
-    munmap(childs_pid, sizeof(int));
-    munmap(flagchar, 10); // clean up space
-    munmap(filetofind, 100);
+               // if (result[0] == NULL)
+                // {
+                //     write(pi[1], "> no file found < \n\0", strlen("> no file found < \n\0"));
+                // }
