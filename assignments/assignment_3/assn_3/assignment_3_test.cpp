@@ -43,7 +43,7 @@ int main()
     char result[BUFFERSIZE];
     char args[BUFFERSIZE];
     char *arg_tokens[10] = {0};
-    int child_pids[10] = {0};
+    // int child_pids[10] = {0};
     result[0] = NULL; // to check if it's been changed later
 
     char *alldir = "/";
@@ -65,6 +65,12 @@ int main()
 
     int *childcount = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    int *child_pids = (int *)mmap(NULL, 10 * sizeof(int), PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    int *keyboardmode = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE,
+                                    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     // text[0] = NULL;
 
     int status = 0;
@@ -72,6 +78,7 @@ int main()
     char findtext[30];
     char text[100];
     childcount = 0;
+    *keyboardmode = 1;
 
     ///////////////////////////////
     //  PARENT PROCESS          ///
@@ -84,7 +91,7 @@ int main()
 
         // sleep(2);
 
-        write(STDIN_FILENO, "findstuff$", 11);
+        write(STDIN_FILENO, "findstuff$ ", 11);
 
         int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
 
@@ -93,6 +100,8 @@ int main()
         printf("%s\n", args);
 
         dup2(save_stdin, STDIN_FILENO); // Restor STDIN for keyboard to work again
+
+        *keyboardmode = 1;
 
         args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
                                        // Thus cleaning up the args array after each input. nice.
@@ -119,25 +128,27 @@ int main()
         //  FORK AND CHILD          ///
         ///////////////////////////////
 
-        ///NEED TO FIGURE OUT HOW TO HANDLE CHILDREN THE BEST!
-        //ARRAY!? or just count!?  But the numbers always change within the children process
-        //Ponder this
+        /// NEED TO FIGURE OUT HOW TO HANDLE CHILDREN THE BEST!
+        // ARRAY!? or just count!?  But the numbers always change within the children process
+        // Ponder this
 
         if (strcmp(firstarg, "find") == 0 || strcmp(firstarg, "quit") == 0)
         {
 
-            printf("childcount outside: ");
-            printf("%d\n", childcount);
+            // printf("childcount outside: ");
+            // printf("%d\n", childcount);
+            *keyboardmode = 0;
+
             if (fork() == 0)
             {
 
                 sleep(10);
                 close(pi[0]);
                 *childs_pid = getpid();
-                childcount++;
+                // childcount++;
 
-                printf("childcount begin: ");
-                printf("%d\n", childcount);
+                // printf("childcount begin: ");
+                // printf("%d\n", childcount);
                 // pidarr(child_pids, *childs_pid, 1, *childcount);
 
                 // cout << "im inside a child" << endl;
@@ -187,9 +198,10 @@ int main()
                 close(pi[1]);
 
                 result[0] = NULL; // Zero out result so there's a clean pipe everytime ?
-                childcount--;
-                printf("childcount end: ");
-                printf("%d\n", childcount);
+                // childcount--;
+                // printf("childcount end: ");
+                // printf("%d\n", childcount);
+                // pidarr(child_pids, *childs_pid, 0, *childcount);
                 return 0;
             }
 
@@ -199,14 +211,14 @@ int main()
         }
 
         waitpid(*childs_pid, &status, WNOHANG);
-
-        // pidarr(child_pids, *childs_pid, 0, *childcount);
     }
 
     // munmap(flag, sizeof(int)); // clean up space
     munmap(childs_pid, sizeof(int));
     munmap(flagchar, 10); // clean up space
     munmap(filetofind, 100);
+    munmap(firstarg, 100);
+    munmap(childcount, sizeof(int));
 
     close(pi[0]);
 
