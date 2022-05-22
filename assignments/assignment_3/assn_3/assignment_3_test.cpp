@@ -21,7 +21,7 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 void change(char *input);
 void signalfct(int i);
 void parseArgs(char *args, char **arg_tokens);
-void pidarr(int *child_pids, int pid, int op, int childcount);
+void pidarr(int *child_pids, int pid, int op, int *childcount);
 
 int main()
 {
@@ -75,10 +75,14 @@ int main()
 
     int status = 0;
 
-    char findtext[30];
-    char text[100];
-    childcount = 0;
+    // char findtext[30];
+    // char text[100];
     *keyboardmode = 1;
+
+    for (int i = 0; i < 10; i++)
+    {
+        child_pids[i] = -1;
+    }
 
     ///////////////////////////////
     //  PARENT PROCESS          ///
@@ -95,7 +99,7 @@ int main()
 
         int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
 
-        args[ra] = '\0';
+        args[ra - 1] = '\0';
 
         printf("%s\n", args);
 
@@ -103,8 +107,8 @@ int main()
 
         *keyboardmode = 1;
 
-        args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
-                                       // Thus cleaning up the args array after each input. nice.
+        // args[strcspn(args, "\n")] = 0; // finds the  new line character that is getting added onto the end of fgets and puts a 0 there.
+        // Thus cleaning up the args array after each input. nice.
 
         parseArgs(args, arg_tokens);
         // Using mmap variables to child can read too
@@ -124,6 +128,8 @@ int main()
             return 0;
         }
 
+        pidarr(child_pids, *childs_pid, 1, childcount);
+
         ///////////////////////////////
         //  FORK AND CHILD          ///
         ///////////////////////////////
@@ -132,28 +138,17 @@ int main()
         // ARRAY!? or just count!?  But the numbers always change within the children process
         // Ponder this
 
-        if (strcmp(firstarg, "find") == 0 || strcmp(firstarg, "quit") == 0)
+        if (strcmp(firstarg, "find") == 0 && *childcount != 10)
         {
 
-            // printf("childcount outside: ");
-            // printf("%d\n", childcount);
             *keyboardmode = 0;
 
             if (fork() == 0)
             {
-
-                sleep(10);
-                close(pi[0]);
                 *childs_pid = getpid();
-                // childcount++;
 
-                // printf("childcount begin: ");
-                // printf("%d\n", childcount);
-                // pidarr(child_pids, *childs_pid, 1, *childcount);
-
-                // cout << "im inside a child" << endl;
-
-                // // kidspid = *childs_pid;
+                sleep(2);
+                close(pi[0]);
 
                 if (flagchar == NULL || flagchar == "") // No flag we will just seach in the current directory
                 {
@@ -181,27 +176,19 @@ int main()
                 }
 
                 else
-                { // NEEED TO FIX THIS....Put it into write? Make it simpler...//
-                    printf("not a valid flag\n");
-                    printf("Usage: find [filename] [flag]\n");
-                    printf("Flags:\n");
-                    printf("-s: search in current dir and all sub-dirs\n");
-                    printf("-f: search in all dirs starting at '/'\n");
-                    printf("no flag: search in current dir only\n\n");
+                {
+                    write(pi[1], "\ninvalid input \0", strlen("\ninvalid input \0"));
                 }
 
                 if (result[0] == NULL)
                 {
-                    write(pi[1], "> no file found < \n\0", strlen("> no file found < \n\0"));
+                    write(pi[1], "\n> no file found < \n\0", strlen("\n> no file found < \n\0"));
                 }
 
                 close(pi[1]);
 
                 result[0] = NULL; // Zero out result so there's a clean pipe everytime ?
-                // childcount--;
-                // printf("childcount end: ");
-                // printf("%d\n", childcount);
-                // pidarr(child_pids, *childs_pid, 0, *childcount);
+
                 return 0;
             }
 
@@ -211,6 +198,7 @@ int main()
         }
 
         waitpid(*childs_pid, &status, WNOHANG);
+        pidarr(child_pids, *childs_pid, 0, childcount);
     }
 
     // munmap(flag, sizeof(int)); // clean up space
@@ -225,45 +213,46 @@ int main()
     return 0;
 }
 
-void pidarr(int *child_pids, int pid, int op, int childcount)
+void pidarr(int *child_pids, int pid, int op, int *childcount)
 {
-
-    if (childcount == 10)
+    if (*childcount == 10)
     {
-        printf("you have too many children. pls wait");
+        cout << "you have too many kids" << endl;
         return;
     }
+
     /// Remove pid
     if (op == 0)
     {
-        printf("removing a child");
+        cout << "removing " << pid << endl;
         for (int i = 0; i < 10; i++)
         {
-            printf("%d\n", child_pids[i]);
             if (child_pids[i] == pid)
             {
-                child_pids[i] = 0;
-                childcount--;
-                printf("childcount: ");
-                printf("%d\n", childcount);
+                child_pids[i] = -1;
+                (*childcount)--;
+                cout << "childcount: " << *childcount << endl;
+                kill(pid, SIGKILL);
+                waitpid(pid, 0, WNOHANG);
+                return;
             }
         }
     }
 
     // Add pid
-    else
+    else if (op == 1 && pid != 0)
     {
         for (int i = 0; i < 10; i++)
         {
-            printf("adding a child");
-            if (child_pids[i] == 0)
+            // cout << child_pids[i] << endl;
+            cout << "adding" << pid << endl;
+
+            if (child_pids[i] == -1)
             {
-                printf("%d\n", child_pids[i]);
                 child_pids[i] = pid;
-                childcount++;
-                printf("childcount: ");
-                printf("%d\n", childcount);
-                break;
+                (*childcount)++;
+                cout << "childcount: " << *childcount << endl;
+                return;
             }
         }
     }
@@ -304,13 +293,11 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         if (strcmp(name, filetofind) == 0)
         {
             // strcpy(result, startdir);
+            result[0] = '\n';
             strcat(result, filetofind);
             strcat(result, "\t");
             strcat(result, startdir);
             strcat(result, "\n");
-
-            // kill(getppid(), SIGUSR1);
-            // write(pi[1], strcat(startdir, "\n\0"), strlen(strcat(startdir, "\n\0")));
             break;
         }
 
@@ -336,69 +323,4 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 void signalfct(int i)
 {
     dup2(pi[0], STDIN_FILENO);
-
-    // printf("is this working\n");
-}
-
-// Show stat in here in case we wanna look at stats of files
-// Prob just need the file type and name?
-void showstat(char *filepath)
-{
-
-    struct stat sb; // Struct for stat. Containing all the necessary
-                    // variables to store the file info
-
-    int ret = stat(filepath, &sb);
-    // stat(file name, address of structure ^)
-    // Returns 0 on success, -1 on error
-
-    printf("File type:                ");
-
-    switch (sb.st_mode & S_IFMT)
-    {
-    case S_IFBLK:
-        printf("block device\n");
-        break;
-    case S_IFCHR:
-        printf("character device\n");
-        break;
-    case S_IFDIR:
-        printf("directory\n");
-        break;
-    case S_IFIFO:
-        printf("FIFO/pipe\n");
-        break;
-    case S_IFLNK:
-        printf("symlink\n");
-        break;
-    case S_IFREG:
-        printf("regular file\n");
-        break;
-    case S_IFSOCK:
-        printf("socket\n");
-        break;
-    default:
-        printf("unknown?\n");
-        break;
-    }
-
-    printf("I-node number:            %ju\n", (uintmax_t)sb.st_ino);
-
-    printf("Mode:                     %jo (octal)\n",
-           (uintmax_t)sb.st_mode);
-
-    printf("Link count:               %ju\n", (uintmax_t)sb.st_nlink);
-    printf("Ownership:                UID=%ju   GID=%ju\n",
-           (uintmax_t)sb.st_uid, (uintmax_t)sb.st_gid);
-
-    printf("Preferred I/O block size: %jd bytes\n",
-           (intmax_t)sb.st_blksize);
-    printf("File size:                %jd bytes\n",
-           (intmax_t)sb.st_size);
-    printf("Blocks allocated:         %jd\n",
-           (intmax_t)sb.st_blocks);
-
-    printf("Last status change:       %s", ctime(&sb.st_ctime));
-    printf("Last file access:         %s", ctime(&sb.st_atime));
-    printf("Last file modification:   %s", ctime(&sb.st_mtime));
 }
