@@ -16,13 +16,10 @@
 using namespace std;
 
 int pi[2];
-int status = 0;
-void showstat(char *filepath);
+int status;
 void findfile(char *filetofind, char *startdir, char *result, int search_in_all_subdirs);
-void change(char *input);
 void signalfct(int i);
 void parseArgs(char *args, char **arg_tokens);
-void pidarr(int *child_pids, int *childs_pid, int op, int *childcount);
 
 int main()
 {
@@ -42,9 +39,8 @@ int main()
 
     char workdir[BUFFERSIZE];
     char result[BUFFERSIZE];
-    char args[BUFFERSIZE];
+    char args[10000];
     char *arg_tokens[10] = {0};
-    // int child_pids[10] = {0};
     result[0] = NULL; // to check if it's been changed later
 
     char *alldir = "/";
@@ -91,7 +87,7 @@ int main()
 
         write(STDIN_FILENO, "findstuff$ ", 11);
 
-        int ra = read(STDIN_FILENO, args, BUFFERSIZE); // how many bytes we really read
+        int ra = read(STDIN_FILENO, args, 10000); // how many bytes we really read
 
         args[ra - 1] = '\0';
 
@@ -112,33 +108,27 @@ int main()
 
         if (strcmp(firstarg, "quit") == 0)
         {
-            for (int i = 0; i < 10; i++)
-            {
-                if (child_pids[i] != -1)
-                {
-                    kill(child_pids[i], SIGKILL);
-                    waitpid(childs_pid[i], &status, WNOHANG);
-                }
-            }
             kill(*childs_pid, SIGKILL);
-            waitpid(*childs_pid, &status, WNOHANG);
+            waitpid(*childs_pid, &status, 0);
             return 0;
         }
 
         ///////////////////////////////
         //  FORK AND CHILD          ///
         ///////////////////////////////
-
-        if (strcmp(firstarg, "find") == 0 && *childcount != 10)
+        if (*childcount >= 9)
+        {
+            fprintf(stderr, "too many child processes. please wait...");
+        }
+        if (strcmp(firstarg, "find") == 0 && *childcount < 9)
         {
 
             if (fork() == 0)
             {
-                (*childcount)++;
-                *childs_pid = getpid();
-                // pidarr(child_pids, childs_pid, 1, childcount);
 
-                sleep(2);
+                *childs_pid = getpid();
+                (*childcount)++;
+
                 close(pi[0]);
 
                 if (flagchar == NULL || flagchar == "") // No flag we will just search in the current directory
@@ -169,92 +159,43 @@ int main()
                     write(pi[1], strcat(result, "\0"), strlen(strcat(result, "\0")));
                 }
 
-                else
-                {
-                    *keyboardmode = 0;
-                    write(pi[1], "\ninvalid input \0", strlen("\ninvalid input \0"));
-                }
-
                 if (result[0] == NULL)
                 {
+                    kill(parent_pid, SIGUSR1);
                     *keyboardmode = 0;
                     write(pi[1], "\n> no file found < \n\0", strlen("\n> no file found < \n\0"));
                 }
 
                 close(pi[1]);
 
-                result[0] = NULL; // Zero out result so there's a clean pipe everytime ?
+                result[0] = NULL; // Zero out result so there's a clean pipe everytime 
 
                 (*childcount)--;
 
                 return 0;
             }
 
+            waitpid(*childs_pid, &status, WNOHANG);
+
+
             // zero out the array so theres no left overs between searches
             for (int i = 0; i < 10; i++)
                 arg_tokens[i] = 0;
-            // pidarr(child_pids, childs_pid, 0, childcount);
-            // kill(*childs_pid, SIGKILL);
-            waitpid(*childs_pid, &status, WNOHANG);
         }
+
     }
 
-    // munmap(flag, sizeof(int)); // clean up space
-    munmap(childs_pid, sizeof(int));
-    munmap(flagchar, 10); // clean up space
-    munmap(filetofind, 100);
     munmap(firstarg, 100);
+    munmap(filetofind, 100);
+    munmap(flagchar, 10); // clean up space
+    munmap(childs_pid, sizeof(int));
     munmap(childcount, sizeof(int));
+    munmap(child_pids, 10 * sizeof(int));
+    munmap(keyboardmode, sizeof(int));
 
     close(pi[0]);
 
     return 0;
-}
-
-void pidarr(int *child_pids, int *childs_pid, int op, int *childcount)
-{
-    if (*childcount == 9)
-    {
-        cout << "you have too many kids. please wait..." << endl;
-        return;
-    }
-
-    /// Remove pid
-    if (op == 0)
-    {
-        cout << "removing " << *childs_pid << endl;
-        for (int i = 0; i < 10; i++)
-        {
-            if (child_pids[i] == *childs_pid)
-            {
-                child_pids[i] = -1;
-                (*childcount)--;
-                cout << "childcount: " << *childcount << endl;
-                kill(*childs_pid, SIGKILL);
-                waitpid(*childs_pid, &status, WNOHANG);
-            }
-        }
-
-        return;
-    }
-
-    // Add pid
-    else if (op == 1)
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            // cout << child_pids[i] << endl;
-            cout << "adding" << *childs_pid << endl;
-
-            if (child_pids[i] == -1)
-            {
-                child_pids[i] = *childs_pid;
-                (*childcount)++;
-                cout << "childcount: " << *childcount << endl;
-                return;
-            }
-        }
-    }
 }
 
 void parseArgs(char *args, char **arg_tokens)
@@ -280,7 +221,6 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
 
     if (dir == NULL)
     {
-        // cout << "" << endl;
         return;
     }
 
@@ -303,12 +243,14 @@ void findfile(char *filetofind, char *startdir, char *result, int search_in_all_
         // directory = 4
         // search all dirs = 1 means seach all dirs
         // check to make sure we dont look into any of the '.' or '..' folders
-        // But do i need to account for hidden folders with "," before their name?!?
         if (entry->d_type == 4 && search_in_all_subdirs == 1 && entry->d_name[0] != '.')
         {
             char nextdir[1000];
             stpcpy(nextdir, startdir);
-            strcat(nextdir, "/");
+            if (strcmp(nextdir, "/") != 0)
+            {
+                strcat(nextdir, "/");
+            }
             strcat(nextdir, entry->d_name);
 
             findfile(filetofind, nextdir, result, search_in_all_subdirs);
