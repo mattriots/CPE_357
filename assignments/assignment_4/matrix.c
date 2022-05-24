@@ -99,10 +99,10 @@ int main(int argc, char *argv[])
         ftruncate(fd[2], MATRIX_DIMENSION_XY);
         ftruncate(fd[3], sizeof(int));
 
-        float *A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
-        float *B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
-        float *C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
-        int *ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
+        B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
+        C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
+        ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
     }
     else
     {
@@ -112,9 +112,9 @@ int main(int argc, char *argv[])
         fd[2] = shm_open("matrixC", O_RDWR, 0777);
         fd[3] = shm_open("synchobject", O_RDWR, 0777);
 
-        float *A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
-        float *B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
-        float *C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
+        A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
+        B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
+        C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
         int *ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
         sleep(2); // needed for initalizing synch
     }
@@ -129,8 +129,8 @@ int main(int argc, char *argv[])
         {
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
             {
-                set_matrix_elem(A, a, b, 2);
-                set_matrix_elem(B, a, b, 3);
+                set_matrix_elem(A, a, b, 20);
+                set_matrix_elem(B, a, b, 20);
             }
         }
     }
@@ -138,6 +138,8 @@ int main(int argc, char *argv[])
     synch(par_id, par_count, ready);
 
     // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
+
+    quadratic_matrix_multiplication(A, B, C);
 
     synch(par_id, par_count, ready);
 
