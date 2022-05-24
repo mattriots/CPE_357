@@ -59,6 +59,62 @@ void quadratic_matrix_multiplication(float *A, float *B, float *C)
             }
 }
 //************************************************************************************************************************
+
+//************************************************************************************************************************
+// multiply two matrices
+// TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
+void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C)
+{
+
+    if (par_count == 4)
+    {
+        // nullify the result matrix first
+        for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
+            for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
+                C[a + b * MATRIX_DIMENSION_XY] = 0.0;
+        if (par_id == 0)
+        {
+            // multiply
+            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)           // over all cols a
+                for (int b = 0; b < (MATRIX_DIMENSION_XY / 4); b++) // over rows 0 -> (10/4)
+                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)   // over all rows/cols left
+                    {
+                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+                    }
+        }
+        else if (par_id == 1)
+        {
+            // multiply
+            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                       // over all cols a
+                for (int b = (MATRIX_DIMENSION_XY / 4); b < (MATRIX_DIMENSION_XY / 4) * 2; b++) // over rows (10/4) -> (10/4) * 2
+                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                               // over all rows/cols left
+                    {
+                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+                    }
+        }
+        else if (par_id == 2)
+        {
+            // multiply
+            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                           // over all cols a
+                for (int b = (MATRIX_DIMENSION_XY / 4) * 2; b < (MATRIX_DIMENSION_XY / 4) * 3; b++) // over rows (10/4) * 2 -> (10/4) * 3
+                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                                   // over all rows/cols left
+                    {
+                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+                    }
+        }
+        else if (par_id == 3)
+        {
+            // multiply
+            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                 // over all cols a
+                for (int b = (MATRIX_DIMENSION_XY / 4) * 3; b < MATRIX_DIMENSION_XY; b++) // // over rows (10/4) * 3 -> 10
+                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                         // over all rows/cols left
+                    {
+                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+                    }
+        }
+    }
+}
+//************************************************************************************************************************
 void synch(int par_id, int par_count, int *ready)
 {
     // TODO: synch algorithm. make sure, ALL processes get stuck here until all ARE here
@@ -67,9 +123,11 @@ void synch(int par_id, int par_count, int *ready)
 int main(int argc, char *argv[])
 {
     int par_id = 0;    // the parallel ID of this process
-    int par_count = 1; // the amount of processes
+    int par_count; // the amount of processes
     float *A, *B, *C;  // matrices A,B and C
     int *ready;        // needed for synch
+
+    printf("par_count: %d\n", par_count);
     if (argc != 3)
     {
         printf("no shared\n");
@@ -115,7 +173,7 @@ int main(int argc, char *argv[])
         A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
-        int *ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        *ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
         sleep(2); // needed for initalizing synch
     }
 
@@ -123,14 +181,14 @@ int main(int argc, char *argv[])
 
     if (par_id == 0)
     {
-        // TODO: initialize the matrices A and B
+        // TODO: initialize the matrices A and B  DONE
 
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
         {
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
             {
-                set_matrix_elem(A, a, b, 20);
-                set_matrix_elem(B, a, b, 20);
+                set_matrix_elem(A, a, b, a);
+                set_matrix_elem(B, a, b, b);
             }
         }
     }
@@ -139,7 +197,14 @@ int main(int argc, char *argv[])
 
     // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
 
-    quadratic_matrix_multiplication(A, B, C);
+    if (par_count == 1)
+    {
+        quadratic_matrix_multiplication(A, B, C);
+    }
+    else
+    {
+        quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C);
+    }
 
     synch(par_id, par_count, ready);
 
