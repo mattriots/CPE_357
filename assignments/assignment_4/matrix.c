@@ -10,8 +10,6 @@
 #include <sys/types.h>
 #define MATRIX_DIMENSION_XY 10
 
-// SEARCH FOR TODO
-
 //************************************************************************************************************************
 // sets one element of the matrix
 void set_matrix_elem(float *M, int x, int y, float f)
@@ -66,53 +64,32 @@ void quadratic_matrix_multiplication(float *A, float *B, float *C)
 void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C)
 {
 
-    if (par_count == 4)
+    if (par_id == 0)
     {
         // nullify the result matrix first
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
                 C[a + b * MATRIX_DIMENSION_XY] = 0.0;
-        if (par_id == 0)
-        {
-            // multiply
-            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)           // over all cols a
-                for (int b = 0; b < (MATRIX_DIMENSION_XY / 4); b++) // over rows 0 -> (10/4)
-                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)   // over all rows/cols left
-                    {
-                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
-                    }
-        }
-        else if (par_id == 1)
-        {
-            // multiply
-            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                       // over all cols a
-                for (int b = (MATRIX_DIMENSION_XY / 4); b < (MATRIX_DIMENSION_XY / 4) * 2; b++) // over rows (10/4) -> (10/4) * 2
-                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                               // over all rows/cols left
-                    {
-                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
-                    }
-        }
-        else if (par_id == 2)
-        {
-            // multiply
-            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                           // over all cols a
-                for (int b = (MATRIX_DIMENSION_XY / 4) * 2; b < (MATRIX_DIMENSION_XY / 4) * 3; b++) // over rows (10/4) * 2 -> (10/4) * 3
-                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                                   // over all rows/cols left
-                    {
-                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
-                    }
-        }
-        else if (par_id == 3)
-        {
-            // multiply
-            for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                 // over all cols a
-                for (int b = (MATRIX_DIMENSION_XY / 4) * 3; b < MATRIX_DIMENSION_XY; b++) // // over rows (10/4) * 3 -> 10
-                    for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                         // over all rows/cols left
-                    {
-                        C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
-                    }
-        }
+        // multiply
+        // for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                   // over all cols a
+        //     for (int b = 0; b < (MATRIX_DIMENSION_XY / par_count); b++) // over rows 0 -> (10/4)
+        //         for (int c = 0; c < MATRIX_DIMENSION_XY; c++)           // over all rows/cols left
+        //         {
+        //             C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+        //         }
     }
+
+    // multiply
+    printf("par_id: %d multipying from %d to %d \n", par_id, par_id, par_id + 1);
+
+    for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                                                               // over all cols a
+        for (int b = ((MATRIX_DIMENSION_XY / par_count) * par_id); b < ((MATRIX_DIMENSION_XY / par_count) * (par_id + 1)); b++) // over rows
+            for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                                                                       // over all rows/cols left
+            {
+                C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+            }
+
+              quadratic_matrix_print(C);
 }
 //************************************************************************************************************************
 
@@ -167,8 +144,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        par_id = atoi(argv[1]);
-        par_count = atoi(argv[2]);
+
+        par_count = atoi(argv[1]);
+        par_id = atoi(argv[2]);
         // strcpy(shared_mem_matrix,argv[3]);
     }
     if (par_count == 1)
@@ -177,9 +155,10 @@ int main(int argc, char *argv[])
     }
 
     printf("par_count: %d\n", par_count);
+    printf("par_id: %d\n", par_id);
 
     int fd[4];
-    if (par_id == 0)
+    if (par_id == 0 ||par_id == 1 || par_id == 2 || par_id == 3 )
     {
         // TODO: init the shared memory for A,B,C, ready. shm_open with C_CREAT here! then ftruncate! then mmap
         fd[0] = shm_open("matrixA", O_CREAT | O_RDWR, 0777);
@@ -190,13 +169,17 @@ int main(int argc, char *argv[])
         ftruncate(fd[0], MATRIX_DIMENSION_XY);
         ftruncate(fd[1], MATRIX_DIMENSION_XY);
         ftruncate(fd[2], MATRIX_DIMENSION_XY);
-        ftruncate(fd[3], sizeof(int));
+        ftruncate(fd[3], par_count * sizeof(int));
 
         A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
-        ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
         // ready[n] = 0; // set all the ready[par_id] to 0
+        for (int i = 0; i < par_count; i++)
+        {
+            ready[i] = 0;
+        }
     }
     else
     {
@@ -210,18 +193,22 @@ int main(int argc, char *argv[])
         A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
-        ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
         // needed for initalizing synch
     }
 
     // for (int i = 0; i < 100; i++){   //CHALLENGE
 
-    synch(par_id, par_count, ready, 0); // gather
+    // printf("par_id: %d at first synch \n", par_id);
+
+    // synch(par_id, par_count, ready, 0); // gather
+
+    // printf("par_id: %d after first synch \n", par_id);
 
     // cout <<par_id << " " << i << endl;
     // }
 
-    if (par_id == 0)
+    if (par_id == 0 || par_id == 1 || par_id == 2 || par_id == 3)
     {
         // TODO: initialize the matrices A and B  DONE
 
@@ -235,7 +222,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    synch(par_id, par_count, ready, 1);
+    // printf("par_id: %d at second synch \n", par_id);
+
+    // synch(par_id, par_count, ready, 1); // gather
+
+    // printf("par_id: %d after second synch \n", par_id);
 
     // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
 
@@ -245,18 +236,35 @@ int main(int argc, char *argv[])
     }
     else
     {
+        
         quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C);
     }
 
-    synch(par_id, par_count, ready, 2);
+    // printf("par_id: %d at third synch \n", par_id);
+
+    // synch(par_id, par_count, ready, 2); // gather
+
+    // printf("par_id: %d after third synch \n", par_id);
 
     if (par_id == 0)
         quadratic_matrix_print(C);
-    synch(par_id, par_count, ready, 3);
+
+    // printf("par_id: %d at fourth synch \n", par_id);
+
+    // synch(par_id, par_count, ready, 3); // gather
+
+    // printf("par_id: %d after fourth synch \n", par_id);
 
     // lets test the result:
     float M[MATRIX_DIMENSION_XY * MATRIX_DIMENSION_XY];
     quadratic_matrix_multiplication(A, B, M);
+
+    // if (par_id == 0)
+    // {
+    //     printf("M Matrix");
+    //     quadratic_matrix_print(M);
+    // }
+
     if (quadratic_matrix_compare(C, M))
         printf("full points!\n");
     else

@@ -5,6 +5,7 @@
         "label": "g++ build active file",
         "command": "/usr/bin/g++",
         "args": [
+        "-lrt",
           "-g",
           "${file}",
           "-o",
