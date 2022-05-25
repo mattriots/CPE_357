@@ -115,19 +115,52 @@ void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *
     }
 }
 //************************************************************************************************************************
-void synch(int par_id, int par_count, int *ready)
+
+// n = 4
+// ready[0] = 0;
+// ready[0] = 0;
+// ready[0] = 0;
+// ready[0] = 0;
+
+void synch(int par_id, int par_count, int *ready, int ri) // ready[n]
 {
     // TODO: synch algorithm. make sure, ALL processes get stuck here until all ARE here
+
+    // Challenge
+    ////No labels and no increments if you want 2% EC
+    // Put video on piazza
+    // for (int i = 0; i < 100; i++)
+
+    ready[par_id]++;
+    int leave = 1;
+    while (leave)
+    {
+        leave = 0;
+        for (int i = 0; i < par_count; i++)
+        {
+            if (ready[i] <= ri)
+            {
+                leave = 1;
+            }
+        }
+    }
 }
 //************************************************************************************************************************
 int main(int argc, char *argv[])
 {
-    int par_id = 0;    // the parallel ID of this process
-    int par_count; // the amount of processes
-    float *A, *B, *C;  // matrices A,B and C
-    int *ready;        // needed for synch
+    // ./calcprogram 0 4
+    // ./calcprogram 1 4
+    // ./calcprogram 2 4
+    // ./calcprogram 3 4
 
-    printf("par_count: %d\n", par_count);
+    int par_id = 0;   // the parallel ID of this process
+    int par_count;    // the amount of processes
+    float *A, *B, *C; // matrices A,B and C
+    int *ready;       // needed for synch
+
+    /// Put print statements here to check
+    // Also put them before and after the syncs to make sure the processes are making through the syncs
+
     if (argc != 3)
     {
         printf("no shared\n");
@@ -142,6 +175,8 @@ int main(int argc, char *argv[])
     {
         printf("only one process\n");
     }
+
+    printf("par_count: %d\n", par_count);
 
     int fd[4];
     if (par_id == 0)
@@ -161,9 +196,11 @@ int main(int argc, char *argv[])
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
         ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        // ready[n] = 0; // set all the ready[par_id] to 0
     }
     else
     {
+        sleep(2);
         // TODO: init the shared memory for A,B,C, ready. shm_open withOUT C_CREAT here! NO ftruncate! but yes to mmap
         fd[0] = shm_open("matrixA", O_RDWR, 0777);
         fd[1] = shm_open("matrixB", O_RDWR, 0777);
@@ -173,11 +210,16 @@ int main(int argc, char *argv[])
         A = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
-        *ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
-        sleep(2); // needed for initalizing synch
+        ready = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        // needed for initalizing synch
     }
 
-    synch(par_id, par_count, ready);
+    // for (int i = 0; i < 100; i++){   //CHALLENGE
+
+    synch(par_id, par_count, ready, 0); // gather
+
+    // cout <<par_id << " " << i << endl;
+    // }
 
     if (par_id == 0)
     {
@@ -193,7 +235,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    synch(par_id, par_count, ready);
+    synch(par_id, par_count, ready, 1);
 
     // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
 
@@ -206,11 +248,11 @@ int main(int argc, char *argv[])
         quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C);
     }
 
-    synch(par_id, par_count, ready);
+    synch(par_id, par_count, ready, 2);
 
     if (par_id == 0)
         quadratic_matrix_print(C);
-    synch(par_id, par_count, ready);
+    synch(par_id, par_count, ready, 3);
 
     // lets test the result:
     float M[MATRIX_DIMENSION_XY * MATRIX_DIMENSION_XY];

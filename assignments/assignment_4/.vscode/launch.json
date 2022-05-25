@@ -9,7 +9,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${fileDirname}/${fileBasenameNoExtension}",
-        "args": ["./matrix", "4"],
+        "args": ["matrix", "4"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
