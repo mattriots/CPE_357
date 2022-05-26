@@ -1,2 +1,1 @@
-  // cout << "Fork: " << stopf - startf << endl;
-    // cout << "Non-Fork: " << stop - start << endl;
+  cout << "Non-Fork: " << duration << endl;

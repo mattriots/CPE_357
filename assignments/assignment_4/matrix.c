@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #define MATRIX_DIMENSION_XY 10
 
 //************************************************************************************************************************
@@ -61,7 +62,7 @@ void quadratic_matrix_multiplication(float *A, float *B, float *C)
 //************************************************************************************************************************
 // multiply two matrices
 // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
-void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C)
+void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C, struct timeval start)
 {
 
     if (par_id == 0)
@@ -70,6 +71,8 @@ void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
                 C[a + b * MATRIX_DIMENSION_XY] = 0.0;
+
+        gettimeofday(&start, NULL);
     }
 
     // multiply
@@ -127,6 +130,7 @@ int main(int argc, char *argv[])
     int par_count;    // the amount of processes
     float *A, *B, *C; // matrices A,B and C
     int *ready;       // needed for synch
+    struct timeval start, end;
 
     /// Put print statements here to check
     // Also put them before and after the syncs to make sure the processes are making through the syncs
@@ -173,6 +177,7 @@ int main(int argc, char *argv[])
         {
             ready[i] = 0;
         }
+        gettimeofday(&start, NULL);
     }
     else
     {
@@ -232,7 +237,7 @@ int main(int argc, char *argv[])
     else
     {
 
-        quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C);
+        quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C, start);
 
         // for (int i = 0; i < 4; i++)
         // {
@@ -247,7 +252,16 @@ int main(int argc, char *argv[])
     // printf("par_id: %d after third synch \n", par_id);
 
     if (par_id == 0)
+    {
+
+        gettimeofday(&end, NULL); // end timing normal -- using time of day
+
+        long duration = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+
         quadratic_matrix_print(C);
+
+        printf("time taken: %d\n", duration);
+    }
 
     // printf("par_id: %d at fourth synch \n", par_id);
 
