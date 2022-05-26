@@ -5,11 +5,11 @@
         "label": "g++ build active file",
         "command": "/usr/bin/g++",
         "args": [
-        "-lrt",
           "-g",
           "${file}",
           "-o",
-          "${fileDirname}/${fileBasenameNoExtension}"
+          "${fileDirname}/${fileBasenameNoExtension}",
+          "-lrt"
         ],
         "options": {
           "cwd": "/usr/bin"

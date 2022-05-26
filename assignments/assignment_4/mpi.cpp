@@ -12,7 +12,7 @@
 
 using namespace std;
 
-//NEED TO FIGURE OUT: Why this only works in debug
+//NEED TO FIGURE OUT: 
 //Also do we wanna try the time thing for extra credit?
 //Or the better gathering method?
 //maayyyybbeeeee

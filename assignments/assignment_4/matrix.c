@@ -75,10 +75,10 @@ void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *
     // multiply
     // printf("par_id: %d multipying from %d to %d \n", par_id, par_id, par_id + 1);
 
-    int diff = (MATRIX_DIMENSION_XY * par_id / par_count);
-    int diff1 = (MATRIX_DIMENSION_XY * (par_id + 1) / par_count);
+    // int diff = (MATRIX_DIMENSION_XY * par_id / par_count);
+    // int diff1 = (MATRIX_DIMENSION_XY * (par_id + 1) / par_count);
 
-    printf("diff: %d diff1: %d \n", diff, diff1);
+    // printf("diff: %d diff1: %d \n", diff, diff1);
 
     for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                                                               // over all cols a
         for (int b = ((MATRIX_DIMENSION_XY * par_id / par_count)); b < ((MATRIX_DIMENSION_XY * (par_id + 1) / par_count)); b++) // over rows
@@ -122,10 +122,6 @@ void synch(int par_id, int par_count, int *ready, int ri) // ready[n]
 //************************************************************************************************************************
 int main(int argc, char *argv[])
 {
-    // ./calcprogram 0 4
-    // ./calcprogram 1 4
-    // ./calcprogram 2 4
-    // ./calcprogram 3 4
 
     int par_id = 0;   // the parallel ID of this process
     int par_count;    // the amount of processes
