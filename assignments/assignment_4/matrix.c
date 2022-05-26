@@ -70,26 +70,23 @@ void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
                 C[a + b * MATRIX_DIMENSION_XY] = 0.0;
-        // multiply
-        // for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                   // over all cols a
-        //     for (int b = 0; b < (MATRIX_DIMENSION_XY / par_count); b++) // over rows 0 -> (10/4)
-        //         for (int c = 0; c < MATRIX_DIMENSION_XY; c++)           // over all rows/cols left
-        //         {
-        //             C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
-        //         }
     }
 
     // multiply
-    printf("par_id: %d multipying from %d to %d \n", par_id, par_id, par_id + 1);
+    // printf("par_id: %d multipying from %d to %d \n", par_id, par_id, par_id + 1);
+
+    int diff = (MATRIX_DIMENSION_XY * par_id / par_count);
+    int diff1 = (MATRIX_DIMENSION_XY * (par_id + 1) / par_count);
+
+    printf("diff: %d diff1: %d \n", diff, diff1);
 
     for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                                                               // over all cols a
-        for (int b = ((MATRIX_DIMENSION_XY / par_count) * par_id); b < ((MATRIX_DIMENSION_XY / par_count) * (par_id + 1)); b++) // over rows
+        for (int b = ((MATRIX_DIMENSION_XY * par_id / par_count)); b < ((MATRIX_DIMENSION_XY * (par_id + 1) / par_count)); b++) // over rows
             for (int c = 0; c < MATRIX_DIMENSION_XY; c++)                                                                       // over all rows/cols left
             {
                 C[a + b * MATRIX_DIMENSION_XY] += A[c + b * MATRIX_DIMENSION_XY] * B[a + c * MATRIX_DIMENSION_XY];
+                // quadratic_matrix_print(C);
             }
-
-              quadratic_matrix_print(C);
 }
 //************************************************************************************************************************
 
@@ -158,7 +155,7 @@ int main(int argc, char *argv[])
     printf("par_id: %d\n", par_id);
 
     int fd[4];
-    if (par_id == 0 ||par_id == 1 || par_id == 2 || par_id == 3 )
+    if (par_id == 0)
     {
         // TODO: init the shared memory for A,B,C, ready. shm_open with C_CREAT here! then ftruncate! then mmap
         fd[0] = shm_open("matrixA", O_CREAT | O_RDWR, 0777);
@@ -201,34 +198,36 @@ int main(int argc, char *argv[])
 
     // printf("par_id: %d at first synch \n", par_id);
 
-    // synch(par_id, par_count, ready, 0); // gather
+    synch(par_id, par_count, ready, 0); // gather
 
     // printf("par_id: %d after first synch \n", par_id);
 
     // cout <<par_id << " " << i << endl;
     // }
 
-    if (par_id == 0 || par_id == 1 || par_id == 2 || par_id == 3)
+    if (par_id == 0)
     {
-        // TODO: initialize the matrices A and B  DONE
+        // TODO: initialize the matrices A and B
+        // Need to make this a random number
+        srand(time(0));
 
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
         {
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
             {
-                set_matrix_elem(A, a, b, a);
-                set_matrix_elem(B, a, b, b);
+                int num1 = (rand() % 9 - 1 + 1) + 1;
+                int num2 = (rand() % 9 - 1 + 1) + 1;
+                set_matrix_elem(A, a, b, num1);
+                set_matrix_elem(B, a, b, num2);
             }
         }
     }
 
     // printf("par_id: %d at second synch \n", par_id);
 
-    // synch(par_id, par_count, ready, 1); // gather
+    synch(par_id, par_count, ready, 1); // gather
 
     // printf("par_id: %d after second synch \n", par_id);
-
-    // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
 
     if (par_count == 1)
     {
@@ -236,13 +235,18 @@ int main(int argc, char *argv[])
     }
     else
     {
-        
+
         quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C);
+
+        // for (int i = 0; i < 4; i++)
+        // {
+        //     quadratic_matrix_multiplication_parallel(i, 4, A, B, C);
+        // }
     }
 
     // printf("par_id: %d at third synch \n", par_id);
 
-    // synch(par_id, par_count, ready, 2); // gather
+    synch(par_id, par_count, ready, 2); // gather
 
     // printf("par_id: %d after third synch \n", par_id);
 
@@ -251,7 +255,7 @@ int main(int argc, char *argv[])
 
     // printf("par_id: %d at fourth synch \n", par_id);
 
-    // synch(par_id, par_count, ready, 3); // gather
+    synch(par_id, par_count, ready, 3); // gather
 
     // printf("par_id: %d after fourth synch \n", par_id);
 

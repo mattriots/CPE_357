@@ -12,6 +12,11 @@
 
 using namespace std;
 
+//NEED TO FIGURE OUT: Why this only works in debug
+//Also do we wanna try the time thing for extra credit?
+//Or the better gathering method?
+//maayyyybbeeeee
+
 int main(int argc, char *argv[])
 {
 
