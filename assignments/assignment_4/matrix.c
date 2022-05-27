@@ -177,7 +177,6 @@ int main(int argc, char *argv[])
         {
             ready[i] = 0;
         }
-        gettimeofday(&start, NULL);
     }
     else
     {
@@ -192,7 +191,6 @@ int main(int argc, char *argv[])
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
         ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
-        // needed for initalizing synch
     }
 
     // for (int i = 0; i < 100; i++){   //CHALLENGE
@@ -210,7 +208,7 @@ int main(int argc, char *argv[])
     {
         // TODO: initialize the matrices A and B
         // Need to make this a random number
-        srand(time(0));
+        // srand(time(0));
 
         for (int a = 0; a < MATRIX_DIMENSION_XY; a++)
         {
@@ -238,11 +236,6 @@ int main(int argc, char *argv[])
     {
 
         quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C, start);
-
-        // for (int i = 0; i < 4; i++)
-        // {
-        //     quadratic_matrix_multiplication_parallel(i, 4, A, B, C);
-        // }
     }
 
     // printf("par_id: %d at third synch \n", par_id);
@@ -258,14 +251,14 @@ int main(int argc, char *argv[])
 
         long duration = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
 
-        quadratic_matrix_print(C);
-
         printf("time taken: %d\n", duration);
+
+        quadratic_matrix_print(C);
     }
 
     // printf("par_id: %d at fourth synch \n", par_id);
 
-    synch(par_id, par_count, ready, 3); // gather
+    // synch(par_id, par_count, ready, 3); // gather
 
     // printf("par_id: %d after fourth synch \n", par_id);
 
