@@ -62,7 +62,7 @@ void quadratic_matrix_multiplication(float *A, float *B, float *C)
 //************************************************************************************************************************
 // multiply two matrices
 // TODO: quadratic_matrix_multiplication_parallel(par_id, par_count,A,B,C, ...);
-void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C, struct timeval start)
+void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *A, float *B, float *C,  struct timeval *start)
 {
 
     if (par_id == 0)
@@ -72,16 +72,8 @@ void quadratic_matrix_multiplication_parallel(int par_id, int par_count, float *
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
                 C[a + b * MATRIX_DIMENSION_XY] = 0.0;
 
-        gettimeofday(&start, NULL);
+        gettimeofday(start, NULL);
     }
-
-    // multiply
-    // printf("par_id: %d multipying from %d to %d \n", par_id, par_id, par_id + 1);
-
-    // int diff = (MATRIX_DIMENSION_XY * par_id / par_count);
-    // int diff1 = (MATRIX_DIMENSION_XY * (par_id + 1) / par_count);
-
-    // printf("diff: %d diff1: %d \n", diff, diff1);
 
     for (int a = 0; a < MATRIX_DIMENSION_XY; a++)                                                                               // over all cols a
         for (int b = ((MATRIX_DIMENSION_XY * par_id / par_count)); b < ((MATRIX_DIMENSION_XY * (par_id + 1) / par_count)); b++) // over rows
@@ -132,9 +124,6 @@ int main(int argc, char *argv[])
     int *ready;       // needed for synch
     struct timeval start, end;
 
-    /// Put print statements here to check
-    // Also put them before and after the syncs to make sure the processes are making through the syncs
-
     if (argc != 3)
     {
         printf("no shared\n");
@@ -144,15 +133,14 @@ int main(int argc, char *argv[])
 
         par_count = atoi(argv[1]);
         par_id = atoi(argv[2]);
-        // strcpy(shared_mem_matrix,argv[3]);
     }
     if (par_count == 1)
     {
         printf("only one process\n");
     }
 
-    printf("par_count: %d\n", par_count);
-    printf("par_id: %d\n", par_id);
+    // printf("par_count: %d\n", par_count);
+    // printf("par_id: %d\n", par_id);
 
     int fd[4];
     if (par_id == 0)
@@ -172,6 +160,7 @@ int main(int argc, char *argv[])
         B = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
         C = (float *)mmap(NULL, MATRIX_DIMENSION_XY, PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
         ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+
         // ready[n] = 0; // set all the ready[par_id] to 0
         for (int i = 0; i < par_count; i++)
         {
@@ -235,7 +224,7 @@ int main(int argc, char *argv[])
     else
     {
 
-        quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C, start);
+        quadratic_matrix_multiplication_parallel(par_id, par_count, A, B, C, &start);
     }
 
     // printf("par_id: %d at third synch \n", par_id);
@@ -258,20 +247,13 @@ int main(int argc, char *argv[])
 
     // printf("par_id: %d at fourth synch \n", par_id);
 
-    // synch(par_id, par_count, ready, 3); // gather
+    synch(par_id, par_count, ready, 3); // gather
 
     // printf("par_id: %d after fourth synch \n", par_id);
 
     // lets test the result:
     float M[MATRIX_DIMENSION_XY * MATRIX_DIMENSION_XY];
     quadratic_matrix_multiplication(A, B, M);
-
-    // if (par_id == 0)
-    // {
-    //     printf("M Matrix");
-    //     quadratic_matrix_print(M);
-    // }
-
     if (quadratic_matrix_compare(C, M))
         printf("full points!\n");
     else
@@ -285,6 +267,9 @@ int main(int argc, char *argv[])
     shm_unlink("matrixB");
     shm_unlink("matrixC");
     shm_unlink("synchobject");
-
+    munmap(A, MATRIX_DIMENSION_XY);
+    munmap(B, MATRIX_DIMENSION_XY);
+    munmap(C, MATRIX_DIMENSION_XY);
+    munmap(ready, par_count * sizeof(int));
     return 0;
 }
