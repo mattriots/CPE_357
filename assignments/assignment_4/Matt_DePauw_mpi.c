@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <iostream>
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,8 +8,6 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-// using namespace std;
 
 int main(int argc, char *argv[])
 {
@@ -38,7 +35,7 @@ int main(int argc, char *argv[])
         if (fork() == 0)
         {
             execv(exe, args);
-            printf("couldn't do exec with %d", exe);
+            printf("couldn't do exec with %s", exe);
             // if successful it terminates the caller
             return 0;
 
