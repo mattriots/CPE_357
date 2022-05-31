@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         {
             for (int b = 0; b < MATRIX_DIMENSION_XY; b++)
             {
-                
+
                 int num1 = (rand() % 10 - 1 + 1) + 1;
                 int num2 = (rand() % 10 - 1 + 1) + 1;
                 set_matrix_elem(A, a, b, num1);
@@ -217,12 +217,15 @@ int main(int argc, char *argv[])
     synch(par_id, par_count, ready, 3); // gather
 
     // lets test the result:
-    float M[MATRIX_DIMENSION_XY * MATRIX_DIMENSION_XY];
-    quadratic_matrix_multiplication(A, B, M);
-    if (quadratic_matrix_compare(C, M))
-        printf("full points!\n");
-    else
-        printf("buuug!\n");
+    if (par_id == 0)
+    {
+        float M[MATRIX_DIMENSION_XY * MATRIX_DIMENSION_XY];
+        quadratic_matrix_multiplication(A, B, M);
+        if (quadratic_matrix_compare(C, M))
+            printf("full points!\n");
+        else
+            printf("buuug!\n");
+    }
 
     close(fd[0]);
     close(fd[1]);
