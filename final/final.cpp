@@ -203,7 +203,7 @@ void multiply(float *pix1, float *pix2, float *datastore, int width1, int height
     //     gettimeofday(start, NULL);
     // }
 
-    for (int a = 0; a < height1; a++)          // over all cols a
+    for (int a = 0; a < width1; a++)          // over all cols a
                                               // for (int b = ((height1 * par_id / par_count)); b < ((height1 * (par_id + 1) / par_count)); b++)
         for (int b = 0; b < height1; b++)     // over rows
             for (int c = 0; c < height1; c++) // over all rows/cols left
@@ -211,22 +211,22 @@ void multiply(float *pix1, float *pix2, float *datastore, int width1, int height
                 // float p1 = pix1[c + b * width1];
                 // float p2 = pix2[a + c * width1];
 
-                float p1b = pix1[c + 0 + b * width1];
-                float p1g = pix1[c + 1 + b * width1];
-                float p1r = pix1[c + 2 + b * width1];
+                // float p1b = pix1[c + 0 + b * height1];
+                // float p1g = pix1[c + 1 + b * height1];
+                // float p1r = pix1[c + 2 + b * height1];
 
-                float p2b = pix2[a + 0 + c * width1];
-                float p2g = pix2[a + 1 + c * width1];
-                float p2r = pix2[a + 2 + c * width1];
+                // float p2b = pix2[a + 0 + c * height1];
+                // float p2g = pix2[a + 1 + c * height1];
+                // float p2r = pix2[a + 2 + c * height1];
 
-                float multb = pix1[c + 0 + b * width1] * pix2[a + 0 + c * width1];
-                float multg = pix1[c + 1 + b * width1] * pix2[a + 1 + c * width1];
-                float multr = pix1[c + 2 + b * width1] * pix2[a + 2 + c * width1];
-                // mult = mult * 0.03;
-                // datastore[a + b * width1] += mult;
-                datastore[a * 3 + 0 + c * width1] += pix1[c * 3 + 0 + b * width1] * pix2[a * 3 + 0 + c * width1];
-                datastore[a * 3 + 1 + c * width1] += pix1[c * 3 + 1 + b * width1] * pix2[a * 3 + 1 + c * width1];
-                datastore[a * 3 + 2 + c * width1] += pix1[c * 3 + 2 + b * width1] * pix2[a * 3 + 2 + c * width1];
+                // float multb = pix1[c + 0 + b * height1] * pix2[a + 0 + c * height1];
+                // float multg = pix1[c + 1 + b * height1] * pix2[a + 1 + c * height1];
+                // float multr = pix1[c + 2 + b * height1] * pix2[a + 2 + c * height1];
+                // // mult = mult * 0.03;
+                // // datastore[a + b * width1] += mult;
+                // datastore[a * 3 + 0 + b * height1] += pix1[c * 3 + 0 + b * height1] * pix2[a * 3 + 0 + c * width1];
+                // datastore[a * 3 + 1 + b * height1] += pix1[c * 3 + 1 + b * height1] * pix2[a * 3 + 1 + c * width1];
+                datastore[a + b * width1] += pix1[c + b * height1] * pix2[a + c * height1];
             }
 
     // for (int j = 0; j < height1; j++) // height or # of rows
