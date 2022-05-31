@@ -48,6 +48,9 @@ void quadratic_matrix_print(float *C, int width1, int height1);
 int main(int argc, char **argv)
 {
 
+    // MAKE NAMED SHARED MEMORY FOR
+    //  pix1, pix2, resultimage, ready
+
     ////////////////////////////////////
     // VARIABLES, SETUP, CLI INPUT    //
     ///////////////////////////////////
@@ -58,7 +61,7 @@ int main(int argc, char **argv)
     // char *fileOut = argv[4];
 
     char *fileInName1 = "f1.bmp";
-    char *fileInName2 = "f0.bmp";
+    char *fileInName2 = "f2.bmp";
     // float ratio = stof(argv[3]);
     char *fileOut = "result.bmp";
 
@@ -131,32 +134,6 @@ void normalize(BYTE *pix, float *pixStore, int size, int width, int height)
         temp = temp / 255;
         pixStore[i] = temp;
     }
-
-    // if ((width % 4 != 0))
-    // {
-    //     width += 4 - width % 4;
-    // }
-
-    // for (int j = 0; j < height; j++) // height or # of rows
-    // {
-
-    //     for (int i = 0; i < width; i++) // width or bytes per row
-    //     {
-    //         float b, g, r; // local BYTE variables to hold pix data
-
-    //         b = (float)pix[(width * j) + i * 3 + 0];
-    //         g = (float)pix[(width * j) + i * 3 + 1];
-    //         r = (float)pix[(width * j) + i * 3 + 2];
-
-    //         float bf = b / 255;
-    //         float gf = g / 255;
-    //         float rf = r / 255;
-
-    //         pixStore[(width * j) + i * 3 + 0] = b / 255;
-    //         pixStore[(width * j) + i * 3 + 1] = g / 255;
-    //         pixStore[(width * j) + i * 3 + 2] = r / 255;
-    //     }
-    // }
 }
 
 void finalize(float *datastore, BYTE *resultstore, int size)
@@ -193,57 +170,34 @@ void multiply(float *pix1, float *pix2, float *datastore, int width1, int height
     int par_id = 1;
     int par_count = 1;
 
-    //  if (par_id == 0)
-    // {
-    // nullify the result matrix first
-    for (int a = 0; a < width1; a++)
-        for (int b = 0; b < height1; b++)
-            datastore[a + b * width1] = 0.0;
-
-    //     gettimeofday(start, NULL);
-    // }
-
-    for (int a = 0; a < width1; a++)          // over all cols a
-                                              // for (int b = ((height1 * par_id / par_count)); b < ((height1 * (par_id + 1) / par_count)); b++)
-        for (int b = 0; b < height1; b++)     // over rows
-            for (int c = 0; c < height1; c++) // over all rows/cols left
+    for (int a = 0; a < 300; a++)
+        for (int b = 0; b < 300 * 3; b++)
+            datastore[a + b * 300] = 0.0;
+    // multiply
+    for (int a = 0; a < 300; a++)         // over all cols a
+        for (int b = 0; b < width1; b++)  // over all rows b
+            for (int c = 0; c < 300; c++) // over all rows/cols left
             {
-                // float p1 = pix1[c + b * width1];
-                // float p2 = pix2[a + c * width1];
+                // datastore[a + b * 300] += pix1[c + b * 300] * pix2[a + c * 300];
+                // int datanum = a + b * 300;
+                // int pix1num = c + b * 300;
+                // int pix2num = a + c * 300;
+                // int x = 0;
+                datastore[(width1 * a) + b * 3 + 0] += pix1[(300 * c) + b * 3 + 0] * pix2[(width1 * a) + c * 3 + 0];
+                datastore[(width1 * a) + b * 3 + 1] += pix1[(300 * c) + b * 3 + 1] * pix2[(width1 * a) + c * 3 + 1];
+                datastore[(width1 * a) + b * 3 + 2] += pix1[(300 * c) + b * 3 + 2] * pix2[(width1 * a) + c * 3 + 2];
 
-                // float p1b = pix1[c + 0 + b * height1];
-                // float p1g = pix1[c + 1 + b * height1];
-                // float p1r = pix1[c + 2 + b * height1];
-
-                // float p2b = pix2[a + 0 + c * height1];
-                // float p2g = pix2[a + 1 + c * height1];
-                // float p2r = pix2[a + 2 + c * height1];
-
-                // float multb = pix1[c + 0 + b * height1] * pix2[a + 0 + c * height1];
-                // float multg = pix1[c + 1 + b * height1] * pix2[a + 1 + c * height1];
-                // float multr = pix1[c + 2 + b * height1] * pix2[a + 2 + c * height1];
-                // // mult = mult * 0.03;
-                // // datastore[a + b * width1] += mult;
-                // datastore[a * 3 + 0 + b * height1] += pix1[c * 3 + 0 + b * height1] * pix2[a * 3 + 0 + c * width1];
-                // datastore[a * 3 + 1 + b * height1] += pix1[c * 3 + 1 + b * height1] * pix2[a * 3 + 1 + c * width1];
-                datastore[a + b * width1] += pix1[c + b * height1] * pix2[a + c * height1];
+                // datastore[a + b * 300 + 1] += pix1[c + b * 300 + 1] * pix2[a + c * 300 + 1];
+                // int datanum1 = a + b * 300 + 1;
+                // int pix1num1 = c + b * 300 + 1;
+                // int pix2num1 = a + c * 300 + 1;
+                // int x = 0;
+                // datastore[a + b * 300 + 2] += pix1[c + b * 300 + 2] * pix2[a + c * 300 + 2];
+                // int datanum2 = a + b * 300 + 2;
+                // int pix1num2 = c + b * 300 + 2;
+                // int pix2num2 = a + c * 300 + 2;
+                // x = 0;
             }
-
-    // for (int j = 0; j < height1; j++) // height or # of rows
-    // {
-
-    //     for (int i = 0; i < width1; i++) // width or bytes per row
-    //     {
-    //         BYTE b_big, g_big, r_big, b_small, g_small, r_small;
-
-    //         b_big = pixbig[(widthbig * j) + i * 3 + 0];
-    //         g_big = pixbig[(widthbig * j) + i * 3 + 1];
-    //         r_big = pixbig[(widthbig * j) + i * 3 + 2];
-
-    //         x = i * widthratio;
-    //         y = j * heightratio;
-    //     }
-    // }
 }
 
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *inFile)
