@@ -152,12 +152,12 @@ void quadratic_matrix_print(float *C, int width1, int height1)
 {
     int count = 0;
     printf("\n");
-    for (int a = 0; a < width1; a++)
+    for (int a = 0; a < 300; a++)
     {
         printf("\n");
-        for (int b = 0; b < height1; b++)
+        for (int b = 0; b < 900; b++)
         {
-            printf("%.2f,", C[a + b * width1]);
+            printf("%.2f,", C[a + b * 300]);
             count++;
         }
     }
@@ -171,34 +171,18 @@ void multiply(float *pix1, float *pix2, float *datastore, int width1, int height
     int par_count = 1;
 
     for (int a = 0; a < 300; a++)
-        for (int b = 0; b < 300 * 3; b++)
-            datastore[a + b * 300 * 3] = 0.0;
+        for (int b = 0; b < 900; b++)
+            datastore[a + b * 300] = 0.0;
 
     // multiply
     for (int a = 0; a < 300; a++)         // over all cols a
         for (int b = 0; b < 300; b++)     // over all rows b
             for (int c = 0; c < 300; c++) // over all rows/cols left
             {
-                // int datanum = a + b * width1;
-                // int pix1num = (c * 3 + 0) + b * 300;
-                // int pix2num = a + (c * 3 + 0) * 300;
-                // int x = 0;
 
-                int datanum = a + b * 300 * 3 + 0;
-                int pix1num = c + b * 300 * 3 + 0;
-                int pix2num = a + c * 300 * 3 + 0;
-
-                int datanum1 = a + b * 300 * 3 + 1;
-                int pix1num1 = c + b * 300 * 3 + 1;
-                int pix2num1 = a + c * 300 * 3 + 1;
-
-                int datanum2 = a + b * 300 * 3 + 2;
-                int pix1num2 = c + b * 300 * 3 + 2;
-                int pix2num2 = a + c * 300 * 3 + 2;
-
-                datastore[a + b * 300 * 3 + 0] += pix1[c + b * 300 * 3 + 0] * pix2[a + c * 300 * 3 + 0];
-                datastore[a + b * 300 * 3 + 1] += pix1[c + b * 300 * 3 + 1] * pix2[a + c * 300 * 3 + 1];
-                datastore[a + b * 300 * 3 + 2] += pix1[c + b * 300 * 3 + 2] * pix2[a + c * 300 * 3 + 2];
+                datastore[a * 3 + b * 300 + 0] += pix1[c * 3 + b * 300 + 0] * pix2[a * 3 + c * 300 + 0];
+                datastore[a * 3 + b * 300 + 1] += pix1[c * 3 + b * 300 + 1] * pix2[a * 3 + c * 300 + 1];
+                datastore[a * 3 + b * 300 + 2] += pix1[c * 3 + b * 300 + 2] * pix2[a * 3 + c * 300 + 2];
 
                 // int num = a * b * c;
 
