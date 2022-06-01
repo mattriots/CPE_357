@@ -1,1 +1,4 @@
-   // int x = 0;
+
+                // int num = a * b * c;
+
+                // printf("%d, ", num);

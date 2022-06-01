@@ -141,7 +141,7 @@ void finalize(float *datastore, BYTE *resultstore, int size)
 
     for (int i = 0; i < size; i++)
     {
-        float temp = (float)datastore[i];
+        float temp = datastore[i];
         temp = temp * 255;
         temp = temp * 0.03;
         resultstore[i] = (BYTE)temp;
@@ -172,31 +172,37 @@ void multiply(float *pix1, float *pix2, float *datastore, int width1, int height
 
     for (int a = 0; a < 300; a++)
         for (int b = 0; b < 300 * 3; b++)
-            datastore[a + b * 300] = 0.0;
+            datastore[a + b * 300 * 3] = 0.0;
+
     // multiply
     for (int a = 0; a < 300; a++)         // over all cols a
-        for (int b = 0; b < width1; b++)  // over all rows b
+        for (int b = 0; b < 300; b++)     // over all rows b
             for (int c = 0; c < 300; c++) // over all rows/cols left
             {
-                // datastore[a + b * 300] += pix1[c + b * 300] * pix2[a + c * 300];
-                // int datanum = a + b * 300;
-                // int pix1num = c + b * 300;
-                // int pix2num = a + c * 300;
+                // int datanum = a + b * width1;
+                // int pix1num = (c * 3 + 0) + b * 300;
+                // int pix2num = a + (c * 3 + 0) * 300;
                 // int x = 0;
-                datastore[(width1 * a) + b * 3 + 0] += pix1[(300 * c) + b * 3 + 0] * pix2[(width1 * a) + c * 3 + 0];
-                datastore[(width1 * a) + b * 3 + 1] += pix1[(300 * c) + b * 3 + 1] * pix2[(width1 * a) + c * 3 + 1];
-                datastore[(width1 * a) + b * 3 + 2] += pix1[(300 * c) + b * 3 + 2] * pix2[(width1 * a) + c * 3 + 2];
 
-                // datastore[a + b * 300 + 1] += pix1[c + b * 300 + 1] * pix2[a + c * 300 + 1];
-                // int datanum1 = a + b * 300 + 1;
-                // int pix1num1 = c + b * 300 + 1;
-                // int pix2num1 = a + c * 300 + 1;
-                // int x = 0;
-                // datastore[a + b * 300 + 2] += pix1[c + b * 300 + 2] * pix2[a + c * 300 + 2];
-                // int datanum2 = a + b * 300 + 2;
-                // int pix1num2 = c + b * 300 + 2;
-                // int pix2num2 = a + c * 300 + 2;
-                // x = 0;
+                int datanum = a + b * 300 * 3 + 0;
+                int pix1num = c + b * 300 * 3 + 0;
+                int pix2num = a + c * 300 * 3 + 0;
+
+                int datanum1 = a + b * 300 * 3 + 1;
+                int pix1num1 = c + b * 300 * 3 + 1;
+                int pix2num1 = a + c * 300 * 3 + 1;
+
+                int datanum2 = a + b * 300 * 3 + 2;
+                int pix1num2 = c + b * 300 * 3 + 2;
+                int pix2num2 = a + c * 300 * 3 + 2;
+
+                datastore[a + b * 300 * 3 + 0] += pix1[c + b * 300 * 3 + 0] * pix2[a + c * 300 * 3 + 0];
+                datastore[a + b * 300 * 3 + 1] += pix1[c + b * 300 * 3 + 1] * pix2[a + c * 300 * 3 + 1];
+                datastore[a + b * 300 * 3 + 2] += pix1[c + b * 300 * 3 + 2] * pix2[a + c * 300 * 3 + 2];
+
+                // int num = a * b * c;
+
+                // printf("%d, ", num);
             }
 }
 
