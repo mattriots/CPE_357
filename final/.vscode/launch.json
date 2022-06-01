@@ -9,7 +9,8 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${fileDirname}/${fileBasenameNoExtension}",
-        "args": [],
+        "args": ["final", "4"], //when running mpi.cpp
+        // "args": ["4", "0"],   //when running matrix.c
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

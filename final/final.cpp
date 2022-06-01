@@ -3,6 +3,8 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/time.h>
 
 #include <sys/mman.h>
 
@@ -40,88 +42,200 @@ struct tagBITMAPINFOHEADER
 
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
-void multiply(float *pix1, float *pix2, float *datastore, int width);
+void multiply(int par_id, int par_count, float *pix1, float *pix2, float *datastore, int width, struct timeval *start);
 void normalize(BYTE *pix, float *pixStore, int size);
 void finalize(float *datastore, BYTE *resultstore, int size);
-void quadratic_matrix_print(float *C, int width1, int height1);
+void synch(int par_id, int par_count, int *ready, int ri);
 
 int main(int argc, char **argv)
 {
-
-    // MAKE NAMED SHARED MEMORY FOR
-    //  pix1, pix2, resultimage, ready
 
     ////////////////////////////////////
     // VARIABLES, SETUP, CLI INPUT    //
     ///////////////////////////////////
 
-    // char *fileInName1 = argv[1];
-    // char *fileInName2 = argv[2];
-    // float ratio = stof(argv[3]);
-    // char *fileOut = argv[4];
-
-    char *fileInName1 = "f1.bmp";
-    char *fileInName2 = "f2.bmp";
-    // float ratio = stof(argv[3]);
-    char *fileOut = "result.bmp";
-
+    int par_id = 0;                           // the parallel ID of this process
+    int par_count;                            // the amount of processes
+    float *pix1Store, *pix2Store, *datastore; // matrices A,B and C
+    int *ready, *size, *width;                // needed for synch
+    char *fileInName1, *fileInName2, *fileOut;
+    BYTE *resultstore;
     tagBIGMAPFILEHEADER fh1; // Struct var for first fileheaders
     tagBITMAPINFOHEADER fih1;
+    struct timeval start, end;
 
     tagBIGMAPFILEHEADER fh2; // Struct var for second fileheaders
     tagBITMAPINFOHEADER fih2;
 
-    FILE *fileIn1 = fopen(fileInName1, "rb"); // Open first pic
-    inFile(fh1, fih1, fileIn1);               // Read in all the header data from file
+    // MAKE NAMED SHARED MEMORY FOR
+    //  pix1, pix2, resultimage, ready
 
-    FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
-    inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
+    if (argc != 3)
+    {
+        printf("no shared\n");
+    }
+    else
+    {
+        par_count = atoi(argv[1]);
+        par_id = atoi(argv[2]);
+    }
 
-    int isize1, width1;
+    int fd[6];
+    if (par_id == 0)
+    {
 
-    // Assign size | width | height
+        fileInName1 = "f1.bmp";
+        fileInName2 = "f2.bmp";
+        fileOut = "result.bmp";
 
-    isize1 = fih1.biSizeImage;
-    width1 = fih1.biWidth;
+        FILE *fileIn1 = fopen(fileInName1, "rb"); // Open first pic
+        inFile(fh1, fih1, fileIn1);               // Read in all the header data from file
 
-    // Need to make this the size of the result
+        FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
+        inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
 
-    float *pix1Store = (float *)malloc(isize1 * sizeof(float));
-    float *pix2Store = (float *)malloc(isize1 * sizeof(float));
-    float *datastore = (float *)malloc(isize1 * sizeof(float));
-    BYTE *resultstore = (BYTE *)malloc(isize1);
+        int isize1, width1;
 
-    // Space for the 2 picture pixels
-    BYTE *pix1 = (BYTE *)malloc(isize1);
-    BYTE *pix2 = (BYTE *)malloc(isize1);
+        // Assign size | width | height
 
-    fread(pix1, isize1, 1, fileIn1); // Read in pix data
-    fread(pix2, isize1, 1, fileIn2); // Read in pix data
+        isize1 = fih1.biSizeImage;
+        width1 = fih1.biWidth;
 
-    fclose(fileIn1); // Close file
-    fclose(fileIn2); // Close file
+        resultstore = (BYTE *)malloc(isize1);
 
-    normalize(pix1, pix1Store, isize1);
-    normalize(pix2, pix2Store, isize1);
+        // TODO: init the shared memory for A,B,C, ready. shm_open with C_CREAT here! then ftruncate! then mmap
+        fd[0] = shm_open("size", O_CREAT | O_RDWR, 0777);
+        fd[1] = shm_open("width", O_CREAT | O_RDWR, 0777);
+        fd[2] = shm_open("matrixA", O_CREAT | O_RDWR, 0777);
+        fd[3] = shm_open("matrixB", O_CREAT | O_RDWR, 0777);
+        fd[4] = shm_open("matrixC", O_CREAT | O_RDWR, 0777);
+        fd[5] = shm_open("synchobject", O_CREAT | O_RDWR, 0777);
+
+        ftruncate(fd[0], sizeof(int));
+        ftruncate(fd[1], sizeof(int));
+        ftruncate(fd[2], isize1 * sizeof(float));
+        ftruncate(fd[3], isize1 * sizeof(float));
+        ftruncate(fd[4], isize1 * sizeof(float));
+        ftruncate(fd[5], par_count * sizeof(int));
+
+        size = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
+        width = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
+        pix1Store = (float *)mmap(NULL, isize1 * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
+        pix2Store = (float *)mmap(NULL, isize1 * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        datastore = (float *)mmap(NULL, isize1 * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[4], 0);
+        ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[5], 0);
+
+        // ready[n] = 0; // set all the ready[par_id] to 0
+        for (int i = 0; i < par_count; i++)
+        {
+            ready[i] = 0;
+        }
+
+        // Space for the 2 picture pixels
+        BYTE *pix1 = (BYTE *)malloc(isize1);
+        BYTE *pix2 = (BYTE *)malloc(isize1);
+
+        //Assign size and width for use in the other processes
+
+        *size = isize1;
+        *width = width1;
+
+        fread(pix1, isize1, 1, fileIn1); // Read in pix data
+        fread(pix2, isize1, 1, fileIn2); // Read in pix data
+
+        fclose(fileIn1); // Close file
+        fclose(fileIn2); // Close file
+
+        normalize(pix1, pix1Store, isize1);
+        normalize(pix2, pix2Store, isize1);
+
+        //Close them and free once we turn them into float arrays
+        free(pix1);
+        free(pix2);
+    }
+    else
+    {
+        sleep(2);
+        fd[0] = shm_open("size", O_CREAT | O_RDWR, 0777);
+        fd[1] = shm_open("width", O_CREAT | O_RDWR, 0777);
+        fd[2] = shm_open("matrixA", O_CREAT | O_RDWR, 0777);
+        fd[3] = shm_open("matrixB", O_CREAT | O_RDWR, 0777);
+        fd[4] = shm_open("matrixC", O_CREAT | O_RDWR, 0777);
+        fd[5] = shm_open("synchobject", O_CREAT | O_RDWR, 0777);
+
+        size = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[0], 0);
+        width = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[1], 0);
+        pix1Store = (float *)mmap(NULL, *size * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[2], 0);
+        pix2Store = (float *)mmap(NULL, *size * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[3], 0);
+        datastore = (float *)mmap(NULL, *size * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[4], 0);
+        ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[5], 0);
+    }
+
+    synch(par_id, par_count, ready, 0);
 
     //Only do parallel processes here
 
-    multiply(pix1Store, pix2Store, datastore, width1);
-    // end paralelle here ?
+    multiply(par_id, par_count, pix1Store, pix2Store, datastore, *width, &start);
 
-    // quadratic_matrix_print(datastore, width1, width1);
+    // end paralell here ?
 
-    finalize(datastore, resultstore, isize1);
+    synch(par_id, par_count, ready, 1);
 
-    outFile(fh1, fih1, resultstore, fileOut);
+    if (par_id == 0)
+    {
+        gettimeofday(&end, NULL);
 
-    free(datastore);
-    free(pix1Store);
-    free(pix2Store);
-    free(pix1);
-    free(pix2);
+        long duration = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+
+        printf("time taken: %d\n", duration);
+
+        finalize(datastore, resultstore, *size);
+
+        outFile(fh1, fih1, resultstore, fileOut);
+    }
+
+    close(fd[0]);
+    close(fd[1]);
+    close(fd[2]);
+    close(fd[3]);
+    close(fd[4]);
+    close(fd[5]);
+
+    shm_unlink("size");
+    shm_unlink("width");
+    shm_unlink("matrixA");
+    shm_unlink("matrixB");
+    shm_unlink("matrixC");
+    shm_unlink("synchobject");
+
+    munmap(size, sizeof(int));
+    munmap(width, sizeof(int));
+    munmap(pix1Store, *size * sizeof(float));
+    munmap(pix2Store, *size * sizeof(float));
+    munmap(datastore, *size * sizeof(float));
+    munmap(ready, par_count * sizeof(int));
+
+    free(resultstore);
 
     return 0;
+}
+
+void synch(int par_id, int par_count, int *ready, int ri) // ready[n]
+{
+
+    ready[par_id]++;
+    int leave = 1;
+    while (leave)
+    {
+        leave = 0;
+        for (int i = 0; i < par_count; i++)
+        {
+            if (ready[i] <= ri)
+            {
+                leave = 1;
+            }
+        }
+    }
 }
 
 void normalize(BYTE *pix, float *pixStore, int size)
@@ -146,39 +260,21 @@ void finalize(float *datastore, BYTE *resultstore, int size)
     }
 }
 
-void quadratic_matrix_print(float *C, int width1, int height1)
+void multiply(int par_id, int par_count, float *pix1, float *pix2, float *datastore, int width, struct timeval *start)
 {
-    int count = 0;
-    printf("\n");
-    for (int a = 0; a < 300; a++)
+    if (par_id == 0)
     {
-        printf("\n");
-        for (int b = 0; b < 900; b++)
-        {
-            // if (C[a + b * 300] == 0.0)
-            // {
-            printf("%.2f,", C[a + b * 300]);
-            count++;
-            // }
-        }
+        for (int a = 0; a < width; a++)
+            for (int b = 0; b < width; b++)
+                datastore[a + b * width] = 0.0;
+
+        gettimeofday(start, NULL);
     }
-    printf("\ncount: %d\n", count);
-}
-
-void multiply(float *pix1, float *pix2, float *datastore, int width)
-{
-
-    int par_id = 1;
-    int par_count = 1;
-
-    for (int a = 0; a < 300; a++)
-        for (int b = 0; b < 300; b++)
-            datastore[a + b * 300] = 0.0;
 
     // multiply
-    for (int a = 0; a < width; a++)         // over all cols a
-        for (int b = 0; b < width; b++)     // over all rows b
-            for (int c = 0; c < width; c++) // over all rows/cols left
+    for (int a = 0; a < width; a++)                                                             // over all cols a
+        for (int b = (width * par_id / par_count); b < (width * (par_id + 1) / par_count); b++) // over all rows b
+            for (int c = 0; c < width; c++)                                                     // over all rows/cols left
             {
 
                 datastore[a * 3 + 0 + b * width * 3] += pix1[c * 3 + 0 + b * width * 3] * pix2[a * 3 + 0 + c * width * 3];
