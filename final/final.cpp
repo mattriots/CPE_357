@@ -77,17 +77,12 @@ int main(int argc, char **argv)
     FILE *fileIn2 = fopen(fileInName2, "rb"); // Open small pic
     inFile(fh2, fih2, fileIn2);               // Read in all the header data from file
 
-    int isize1, width1, height1, isize2, width2, height2;
+    int isize1, width1;
 
     // Assign size | width | height
 
     isize1 = fih1.biSizeImage;
     width1 = fih1.biWidth;
-    // height1 = fih1.biHeight;
-
-    // isize2 = fih2.biSizeImage;//
-    // width2 = fih2.biWidth * 3;
-    // height2 = fih2.biHeight;
 
     // Need to make this the size of the result
 
@@ -98,7 +93,7 @@ int main(int argc, char **argv)
 
     // Space for the 2 picture pixels
     BYTE *pix1 = (BYTE *)malloc(isize1);
-    BYTE *pix2 = (BYTE *)malloc(isize2);
+    BYTE *pix2 = (BYTE *)malloc(isize1);
 
     fread(pix1, isize1, 1, fileIn1); // Read in pix data
     fread(pix2, isize1, 1, fileIn2); // Read in pix data
@@ -109,13 +104,12 @@ int main(int argc, char **argv)
     normalize(pix1, pix1Store, isize1);
     normalize(pix2, pix2Store, isize1);
 
-    multiply(pix1Store, pix2Store, datastore, width1);
-
     //Only do parallel processes here
 
-    quadratic_matrix_print(datastore, width1, height1);
-
+    multiply(pix1Store, pix2Store, datastore, width1);
     // end paralelle here ?
+
+    // quadratic_matrix_print(datastore, width1, width1);
 
     finalize(datastore, resultstore, isize1);
 
@@ -189,8 +183,7 @@ void multiply(float *pix1, float *pix2, float *datastore, int width)
 
                 datastore[a * 3 + 0 + b * width * 3] += pix1[c * 3 + 0 + b * width * 3] * pix2[a * 3 + 0 + c * width * 3];
                 datastore[a * 3 + 1 + b * width * 3] += pix1[c * 3 + 1 + b * width * 3] * pix2[a * 3 + 1 + c * width * 3];
-                datastore[a * 3 + 2 + b * width * 3] += pix1[c * 3 + 2 + b * width *3] * pix2[a * 3 + 2 + c * width * 3];
-
+                datastore[a * 3 + 2 + b * width * 3] += pix1[c * 3 + 2 + b * width * 3] * pix2[a * 3 + 2 + c * width * 3];
             }
 }
 
