@@ -40,8 +40,8 @@ struct tagBITMAPINFOHEADER
 
 void inFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, FILE *fileIn);
 void outFile(tagBIGMAPFILEHEADER &fh, tagBITMAPINFOHEADER &fih, BYTE *pix, char *fileOut);
-void multiply(float *pix1, float *pix2, float *datastore, int width1, int height1, int width2, int height2);
-void normalize(BYTE *pix, float *pixStore, int size, int width, int height);
+void multiply(float *pix1, float *pix2, float *datastore, int width);
+void normalize(BYTE *pix, float *pixStore, int size);
 void finalize(float *datastore, BYTE *resultstore, int size);
 void quadratic_matrix_print(float *C, int width1, int height1);
 
@@ -82,40 +82,44 @@ int main(int argc, char **argv)
     // Assign size | width | height
 
     isize1 = fih1.biSizeImage;
-    width1 = fih1.biWidth * 3;
-    height1 = fih1.biHeight;
+    width1 = fih1.biWidth;
+    // height1 = fih1.biHeight;
 
-    isize2 = fih2.biSizeImage;
-    width2 = fih2.biWidth * 3;
-    height2 = fih2.biHeight;
+    // isize2 = fih2.biSizeImage;//
+    // width2 = fih2.biWidth * 3;
+    // height2 = fih2.biHeight;
 
     // Need to make this the size of the result
 
-    float *pix1Store = (float *)malloc(width1 * height1 * sizeof(float));
-    float *pix2Store = (float *)malloc(width1 * height1 * sizeof(float));
-    float *datastore = (float *)malloc(width1 * height1 * sizeof(float));
-    BYTE *resultstore = (BYTE *)malloc(width1 * height1 * 3);
+    float *pix1Store = (float *)malloc(isize1 * sizeof(float));
+    float *pix2Store = (float *)malloc(isize1 * sizeof(float));
+    float *datastore = (float *)malloc(isize1 * sizeof(float));
+    BYTE *resultstore = (BYTE *)malloc(isize1);
 
     // Space for the 2 picture pixels
     BYTE *pix1 = (BYTE *)malloc(isize1);
     BYTE *pix2 = (BYTE *)malloc(isize2);
 
     fread(pix1, isize1, 1, fileIn1); // Read in pix data
-    fread(pix2, isize2, 1, fileIn2); // Read in pix data
+    fread(pix2, isize1, 1, fileIn2); // Read in pix data
 
     fclose(fileIn1); // Close file
     fclose(fileIn2); // Close file
 
-    normalize(pix1, pix1Store, isize1, width1, height1);
-    normalize(pix2, pix2Store, isize2, width2, height2);
+    normalize(pix1, pix1Store, isize1);
+    normalize(pix2, pix2Store, isize1);
 
-    multiply(pix1Store, pix2Store, datastore, width1, height1, width2, height2);
+    multiply(pix1Store, pix2Store, datastore, width1);
+
+    //Only do parallel processes here
 
     quadratic_matrix_print(datastore, width1, height1);
 
+    // end paralelle here ?
+
     finalize(datastore, resultstore, isize1);
 
-    outFile(fh1, fih1, resultstore, fileOut); // Write file out
+    outFile(fh1, fih1, resultstore, fileOut);
 
     free(datastore);
     free(pix1Store);
@@ -126,7 +130,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void normalize(BYTE *pix, float *pixStore, int size, int width, int height)
+void normalize(BYTE *pix, float *pixStore, int size)
 {
     for (int i = 0; i < size; i++)
     {
@@ -157,36 +161,36 @@ void quadratic_matrix_print(float *C, int width1, int height1)
         printf("\n");
         for (int b = 0; b < 900; b++)
         {
+            // if (C[a + b * 300] == 0.0)
+            // {
             printf("%.2f,", C[a + b * 300]);
             count++;
+            // }
         }
     }
     printf("\ncount: %d\n", count);
 }
 
-void multiply(float *pix1, float *pix2, float *datastore, int width1, int height1, int width2, int height2)
+void multiply(float *pix1, float *pix2, float *datastore, int width)
 {
 
     int par_id = 1;
     int par_count = 1;
 
     for (int a = 0; a < 300; a++)
-        for (int b = 0; b < 900; b++)
+        for (int b = 0; b < 300; b++)
             datastore[a + b * 300] = 0.0;
 
     // multiply
-    for (int a = 0; a < 300; a++)         // over all cols a
-        for (int b = 0; b < 300; b++)     // over all rows b
-            for (int c = 0; c < 300; c++) // over all rows/cols left
+    for (int a = 0; a < width; a++)         // over all cols a
+        for (int b = 0; b < width; b++)     // over all rows b
+            for (int c = 0; c < width; c++) // over all rows/cols left
             {
 
-                datastore[a * 3 + b * 300 + 0] += pix1[c * 3 + b * 300 + 0] * pix2[a * 3 + c * 300 + 0];
-                datastore[a * 3 + b * 300 + 1] += pix1[c * 3 + b * 300 + 1] * pix2[a * 3 + c * 300 + 1];
-                datastore[a * 3 + b * 300 + 2] += pix1[c * 3 + b * 300 + 2] * pix2[a * 3 + c * 300 + 2];
+                datastore[a * 3 + 0 + b * width * 3] += pix1[c * 3 + 0 + b * width * 3] * pix2[a * 3 + 0 + c * width * 3];
+                datastore[a * 3 + 1 + b * width * 3] += pix1[c * 3 + 1 + b * width * 3] * pix2[a * 3 + 1 + c * width * 3];
+                datastore[a * 3 + 2 + b * width * 3] += pix1[c * 3 + 2 + b * width *3] * pix2[a * 3 + 2 + c * width * 3];
 
-                // int num = a * b * c;
-
-                // printf("%d, ", num);
             }
 }
 

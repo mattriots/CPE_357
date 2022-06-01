@@ -1,4 +1,1 @@
-
-                // int num = a * b * c;
-
-                // printf("%d, ", num);
+quadratic_matrix_print(pixStore, width, height);
