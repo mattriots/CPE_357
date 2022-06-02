@@ -59,16 +59,15 @@ int main(int argc, char **argv)
     float *pix1Store, *pix2Store, *datastore; // matrices A,B and C
     int *ready, *size, *width;                // needed for synch
     char *fileInName1, *fileInName2, *fileOut;
+
     BYTE *resultstore;
     tagBIGMAPFILEHEADER fh1; // Struct var for first fileheaders
     tagBITMAPINFOHEADER fih1;
-    struct timeval start, end;
 
     tagBIGMAPFILEHEADER fh2; // Struct var for second fileheaders
     tagBITMAPINFOHEADER fih2;
 
-    // MAKE NAMED SHARED MEMORY FOR
-    //  pix1, pix2, resultimage, ready
+    struct timeval start, end;
 
     if (argc != 3)
     {
@@ -135,7 +134,7 @@ int main(int argc, char **argv)
         BYTE *pix1 = (BYTE *)malloc(isize1);
         BYTE *pix2 = (BYTE *)malloc(isize1);
 
-        //Assign size and width for use in the other processes
+        // Assign size and width for use in the other processes
 
         *size = isize1;
         *width = width1;
@@ -149,7 +148,7 @@ int main(int argc, char **argv)
         normalize(pix1, pix1Store, isize1);
         normalize(pix2, pix2Store, isize1);
 
-        //Close them and free once we turn them into float arrays
+        // Close them and free once we turn them into float arrays
         free(pix1);
         free(pix2);
     }
@@ -173,7 +172,7 @@ int main(int argc, char **argv)
 
     synch(par_id, par_count, ready, 0);
 
-    //Only do parallel processes here
+    // Only do parallel processes here
 
     multiply(par_id, par_count, pix1Store, pix2Store, datastore, *width, &start);
 
@@ -270,6 +269,10 @@ void multiply(int par_id, int par_count, float *pix1, float *pix2, float *datast
 
         gettimeofday(start, NULL);
     }
+    // int low = width * par_id / par_count;
+    // int high = (width * (par_id + 1) / par_count);
+
+    // printf("par_id: %d from: %d to: %d\n",par_id, low, high);
 
     // multiply
     for (int a = 0; a < width; a++)                                                             // over all cols a
