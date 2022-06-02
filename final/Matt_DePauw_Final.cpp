@@ -124,6 +124,10 @@ int main(int argc, char **argv)
         datastore = (float *)mmap(NULL, isize1 * sizeof(float), PROT_READ | PROT_WRITE, MAP_SHARED, fd[4], 0);
         ready = (int *)mmap(NULL, par_count * sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd[5], 0);
 
+        // Assign size and width for use in the other processes
+        *size = isize1;
+        *width = width1;
+
         // ready[n] = 0; // set all the ready[par_id] to 0
         for (int i = 0; i < par_count; i++)
         {
@@ -133,11 +137,6 @@ int main(int argc, char **argv)
         // Space for the 2 picture pixels
         BYTE *pix1 = (BYTE *)malloc(isize1);
         BYTE *pix2 = (BYTE *)malloc(isize1);
-
-        // Assign size and width for use in the other processes
-
-        *size = isize1;
-        *width = width1;
 
         fread(pix1, isize1, 1, fileIn1); // Read in pix data
         fread(pix2, isize1, 1, fileIn2); // Read in pix data
@@ -186,7 +185,7 @@ int main(int argc, char **argv)
 
         long duration = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
 
-        printf("time taken: %d\n", duration);
+        printf("Time taken with %d processes: %d\n", par_count, duration);
 
         finalize(datastore, resultstore, *size);
 

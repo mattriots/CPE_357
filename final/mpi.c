@@ -38,8 +38,6 @@ int main(int argc, char *argv[])
             printf("couldn't do exec with %s", exe);
             // if successful it terminates the caller
             return 0;
-
-            // execv("./calcmatrix", ("calcmatrix, "4", "0", "NULL"))
         }
     }
     wait(0);
